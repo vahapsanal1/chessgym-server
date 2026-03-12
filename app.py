@@ -13,7 +13,7 @@ UPDATES_DIR = os.path.join(os.path.dirname(__file__), "updates")
 @app.route("/version")
 def version():
     """Returns version info as JSON. ChessGym reads this to check for updates."""
-    download_url = DOWNLOAD_URL if DOWNLOAD_URL else "/download"
+    download_url = DOWNLOAD_URL if DOWNLOAD_URL else "https://chessgym-server.onrender.com/download"
     return jsonify({
         "version": VERSION,
         "download_url": download_url,
