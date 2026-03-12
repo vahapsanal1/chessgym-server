@@ -7,7 +7,7 @@ app = Flask(__name__)
 VERSION = "1.3"
 DOWNLOAD_URL = ""  # Leave empty to serve from this server, or set an external URL
 
-UPDATES_DIR = os.path.join(os.path.dirname(__file__), "updates")
+UPDATES_DIR = os.path.dirname(__file__)
 
 
 @app.route("/version")
@@ -23,7 +23,7 @@ def version():
 @app.route("/download")
 def download():
     """Serves the update ZIP file directly."""
-    zip_name = "ChessGym_v1.0.zip"
+    zip_name = "ChessGym_update.zip"
     zip_path = os.path.join(UPDATES_DIR, zip_name)
     if not os.path.isfile(zip_path):
         abort(404, "Update file not found")
