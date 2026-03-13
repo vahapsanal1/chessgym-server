@@ -4,7 +4,7 @@ import os
 app = Flask(__name__)
 
 # Update these values when releasing a new version
-VERSION = "3.7"
+VERSION = "3.8"
 DOWNLOAD_URL = ""  # Leave empty to serve from this server, or set an external URL
 
 UPDATES_DIR = os.path.dirname(__file__)

@@ -1023,7 +1023,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.7",
+    "version": "3.8",
 }
 
 def _load_config():
@@ -1409,6 +1409,7 @@ class BoardWidget(QWidget):
         self.drag_sq = None
         self.drag_pos = None
         self.game_over = False
+        self._show_coords = False
         self._sq = SQ
         self._ox = BOARD_OX
         self._oy = BOARD_OY
@@ -1519,6 +1520,29 @@ class BoardWidget(QWidget):
                 else:
                     draw_piece_painter(p, piece.piece_type, piece.color,
                                        int(dx - S // 2), int(dy - S // 2), S)
+
+        # Board coordinates (ranks on left, files on bottom)
+        if self._show_coords:
+            coord_color = QColor(T['text_primary'])
+            coord_color.setAlphaF(0.4)
+            coord_font = QFont(_UI_FONT, 11, QFont.Weight.Normal)
+            p.setFont(coord_font)
+            p.setPen(coord_color)
+            fm = p.fontMetrics()
+            # Ranks (1-8) on the left side, centered vertically with each square
+            for i in range(8):
+                rank = (i + 1) if self.flipped else (8 - i)
+                label = str(rank)
+                tx = OX - FW + (FW - fm.horizontalAdvance(label)) // 2
+                ty = OY + i * S + (S + fm.capHeight()) // 2
+                p.drawText(tx, ty, label)
+            # Files (a-h) on the bottom, centered horizontally with each square
+            for i in range(8):
+                file_idx = (7 - i) if self.flipped else i
+                label = chr(ord('a') + file_idx)
+                tx = OX + i * S + (S - fm.horizontalAdvance(label)) // 2
+                ty = OY + 8 * S + FW - (FW - fm.capHeight()) // 2
+                p.drawText(tx, ty, label)
 
         p.end()
 
@@ -1854,9 +1878,9 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.7", self)
+        self._ver_lbl = QLabel("v3.8", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
-        self._ver_lbl.setStyleSheet("color: rgba(255,165,0,0.6); background: transparent;")
+        self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -1890,7 +1914,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.7"
+        CURRENT_VERSION = "3.8"
         SERVER_URL = "https://chessgym-server.onrender.com"
 
         # Step 1: Check version via PowerShell (bat that writes result to temp file)
@@ -7468,6 +7492,12 @@ class MainWindow(QMainWindow):
             # Refresh the mute button if the current page has one
             if self._current_page and hasattr(self._current_page, '_mute_btn'):
                 self._current_page._mute_btn.refresh()
+        elif event.key() == Qt.Key.Key_N:
+            # Toggle board coordinates on all visible BoardWidgets
+            if self._current_page:
+                for child in self._current_page.findChildren(BoardWidget):
+                    child._show_coords = not child._show_coords
+                    child.update()
         else:
             super().keyPressEvent(event)
 
