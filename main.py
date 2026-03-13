@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.45",
+    "version": "3.46",
 }
 
 def _load_config():
@@ -1875,7 +1875,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.45", self)
+        self._ver_lbl = QLabel("v3.46", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1950,7 +1950,7 @@ class LauncherPage(FrostBackground):
                             return
                         data = json.loads(content)
                         server_ver = data.get("version", "0")
-                        current_ver = "3.45"
+                        current_ver = "3.46"
                         sv = tuple(int(x) for x in server_ver.strip().split("."))
                         cv = tuple(int(x) for x in current_ver.strip().split("."))
                         if sv > cv:
@@ -1994,7 +1994,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.45"
+        CURRENT_VERSION = "3.46"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2081,7 +2081,7 @@ class LauncherPage(FrostBackground):
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.45"
+        CURRENT_VERSION = "3.46"
 
         def parse_ver(v):
             return tuple(int(x) for x in v.strip().split("."))
@@ -4001,11 +4001,20 @@ class WinPosSetupPage(FrostBackground):
         for lbl in self._section_labels:
             lbl.setFont(QFont(_UI_FONT, sec_fs, QFont.Weight.Normal))
 
-        # Advantage-level range buttons
-        range_fs = max(9, int(12 * s))
-        range_mw = max(80, int(110 * s))
-        range_mh = max(34, int(52 * s))
-        range_pad_h = max(6, int(16 * s))
+        # Advantage-level range buttons — stack vertically on small screens
+        from PyQt6.QtWidgets import QBoxLayout
+        vertical = s < 0.7
+        if vertical:
+            self._range_btn_row.setDirection(QBoxLayout.Direction.TopToBottom)
+            range_fs = max(10, int(12 * s))
+            range_mh = max(38, int(48 * s))
+            range_pad_h = max(10, int(16 * s))
+        else:
+            self._range_btn_row.setDirection(QBoxLayout.Direction.LeftToRight)
+            range_fs = max(9, int(12 * s))
+            range_mh = max(34, int(52 * s))
+            range_pad_h = max(6, int(16 * s))
+        range_mw = 0 if vertical else max(80, int(110 * s))
         for btn in self._range_btns:
             btn.setFont(QFont(_UI_FONT, range_fs, QFont.Weight.Normal))
             btn.setMinimumWidth(range_mw)
