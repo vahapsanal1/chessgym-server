@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.20",
+    "version": "3.21",
 }
 
 def _load_config():
@@ -1879,7 +1879,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.20", self)
+        self._ver_lbl = QLabel("v3.21", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1915,7 +1915,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.20"
+        CURRENT_VERSION = "3.21"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2048,6 +2048,8 @@ class LauncherPage(FrostBackground):
                 '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
+                # Clear env var so bootstrapper loads external main.py
+                'set _CHESSGYM_EXTERNAL=\r\n'
                 # Relaunch ChessGym (delay lets filesystem flush the move)
                 'timeout /t 2 /nobreak\r\n'
                 'start "" "' + exe_path + '"\r\n'
