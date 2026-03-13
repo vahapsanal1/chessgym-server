@@ -1023,7 +1023,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.1",
+    "version": "3.2",
 }
 
 def _load_config():
@@ -1854,9 +1854,9 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.1", self)
+        self._ver_lbl = QLabel("v3.2", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
-        self._ver_lbl.setStyleSheet("color: rgba(255,165,0,0.6); background: transparent;")
+        self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -7420,7 +7420,7 @@ def main():
         if "version" not in cfg:
             cfg["version"] = "2.3"
             _save_config(cfg)
-            print("[Update] No version in config — set to 3.1")
+            print("[Update] No version in config — set to 3.2")
     except Exception:
         pass
 
