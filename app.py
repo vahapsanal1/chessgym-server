@@ -22,16 +22,15 @@ def version():
 
 @app.route("/download")
 def download():
-    """Serves the update ZIP file directly."""
-    zip_name = "ChessGym_update.zip"
-    zip_path = os.path.join(UPDATES_DIR, zip_name)
-    if not os.path.isfile(zip_path):
-        abort(404, "Update file not found")
+    """Serves main.py directly as a file download."""
+    main_py = os.path.join(UPDATES_DIR, "main.py")
+    if not os.path.isfile(main_py):
+        abort(404, "main.py not found")
     return send_from_directory(
         UPDATES_DIR,
-        zip_name,
+        "main.py",
         as_attachment=True,
-        mimetype="application/zip",
+        mimetype="text/x-python",
     )
 
 
