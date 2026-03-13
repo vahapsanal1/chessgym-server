@@ -1023,7 +1023,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.2",
+    "version": "3.3",
 }
 
 def _load_config():
@@ -1854,7 +1854,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.2", self)
+        self._ver_lbl = QLabel("v3.3", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1890,37 +1890,21 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
         # Create the .bat file
-        # Step 1: Download main_new.py via PowerShell bat
-        dl_bat = os.path.join(BASE_DIR, "do_download.bat")
-        with open(dl_bat, "w", encoding="ascii") as f:
+        bat_path = os.path.join(BASE_DIR, "do_update.bat")
+        with open(bat_path, "w", encoding="ascii") as f:
             f.write(
                 '@echo off\r\n'
                 "powershell.exe -NonInteractive -Command "
                 "\"Invoke-WebRequest -Uri 'https://chessgym-server.onrender.com/download' "
-                "-OutFile '%~dp0main_new.py'\"\r\n"
+                "-OutFile '%~dp0main.py'\"\r\n"
                 'del "%~0"\r\n'
             )
-        os.startfile(dl_bat)
-
-        # Step 2: Create swap bat (waits 3s for ChessGym to close, then swaps files)
-        swap_bat = os.path.join(BASE_DIR, "do_update.bat")
-        with open(swap_bat, "w", encoding="ascii") as f:
-            f.write(
-                '@echo off\r\n'
-                'timeout /t 3 /nobreak\r\n'
-                'del "%~dp0main.py"\r\n'
-                'rename "%~dp0main_new.py" "main.py"\r\n'
-                'del "%~0"\r\n'
-            )
-
+        os.startfile(bat_path)
         QMessageBox.information(
             self, "Updating",
             "Update is downloading. ChessGym will now close.\n\n"
             "Please reopen in 30 seconds.")
-
-        # Step 3: Launch swap bat then force-exit
-        os.startfile(swap_bat)
-        os._exit(0)
+        sys.exit(0)
 
     def _update_dots(self):
         # Inner glow colors per theme
