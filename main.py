@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.25",
+    "version": "3.26",
 }
 
 def _load_config():
@@ -1879,7 +1879,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.25", self)
+        self._ver_lbl = QLabel("v3.26", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1915,7 +1915,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.25"
+        CURRENT_VERSION = "3.26"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -1999,6 +1999,7 @@ class LauncherPage(FrostBackground):
         bat_path = os.path.join(BASE_DIR, "do_update.bat")
         main_new = os.path.join(BASE_DIR, "main_new.py").replace("/", "\\")
         main_old = os.path.join(BASE_DIR, "main.py").replace("/", "\\")
+        exe_path = os.path.join(BASE_DIR, "ChessGym.exe").replace("/", "\\")
         bat_abs = bat_path.replace("/", "\\")
         # Write result to a status file so we can check outcome
         status_file = os.path.join(BASE_DIR, "_update_status.txt").replace("/", "\\")
@@ -2060,8 +2061,21 @@ class LauncherPage(FrostBackground):
 
         if result == "OK":
             QMessageBox.information(self, "Update Complete",
-                "Update completed!\n"
-                "Please restart the program for changes to apply.")
+                "Update complete!\n"
+                "The app will now restart to apply changes.")
+            # Relaunch via bat with clean environment
+            relaunch_bat = os.path.join(BASE_DIR, "do_relaunch.bat")
+            relaunch_abs = relaunch_bat.replace("/", "\\")
+            with open(relaunch_bat, "w", encoding="ascii") as f:
+                f.write(
+                    '@echo off\r\n'
+                    'set _CHESSGYM_EXTERNAL=\r\n'
+                    'timeout /t 3 /nobreak\r\n'
+                    'start "" "' + exe_path + '"\r\n'
+                    'del "' + relaunch_abs + '"\r\n'
+                )
+            os.startfile(relaunch_bat)
+            os._exit(0)
         elif result == "FAIL":
             QMessageBox.warning(self, "Update Failed",
                 "Update failed. Your current version is unchanged.\n"
