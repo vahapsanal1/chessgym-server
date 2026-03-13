@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.40",
+    "version": "3.41",
 }
 
 def _load_config():
@@ -1875,7 +1875,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.40", self)
+        self._ver_lbl = QLabel("v3.41", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1950,7 +1950,7 @@ class LauncherPage(FrostBackground):
                             return
                         data = json.loads(content)
                         server_ver = data.get("version", "0")
-                        current_ver = "3.40"
+                        current_ver = "3.41"
                         sv = tuple(int(x) for x in server_ver.strip().split("."))
                         cv = tuple(int(x) for x in current_ver.strip().split("."))
                         if sv > cv:
@@ -1983,7 +1983,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.40"
+        CURRENT_VERSION = "3.41"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2070,7 +2070,7 @@ class LauncherPage(FrostBackground):
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.40"
+        CURRENT_VERSION = "3.41"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
         def parse_ver(v):
@@ -3830,6 +3830,9 @@ class WinPosSetupPage(FrostBackground):
         self._pos_count_lbl.setStyleSheet(f"color: {T['text_muted']}; background: transparent;")
         self._pos_count_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._pos_count_lbl.setWordWrap(True)
+        self._pos_count_lbl.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+        self._pos_count_lbl.setMinimumHeight(20)
         cl1.addWidget(self._pos_count_lbl)
         self._update_pos_count()
 
@@ -3990,7 +3993,9 @@ class WinPosSetupPage(FrostBackground):
         self._range_btn_row.setSpacing(max(4, int(8 * s)))
 
         # Position count label
-        self._pos_count_lbl.setFont(QFont(_UI_FONT, max(8, int(11 * s)), QFont.Weight.Normal))
+        pc_fs = max(8, int(11 * s))
+        self._pos_count_lbl.setFont(QFont(_UI_FONT, pc_fs, QFont.Weight.Normal))
+        self._pos_count_lbl.setMinimumHeight(max(16, int(20 * s)))
 
         # Play-as buttons
         color_mw = max(90, int(180 * s))
