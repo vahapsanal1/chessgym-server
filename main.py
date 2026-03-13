@@ -1890,11 +1890,89 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
+        CURRENT_VERSION = "3.6"
+        SERVER_URL = "https://chessgym-server.onrender.com"
+
+        # Step 1: Check version via PowerShell (bat that writes result to temp file)
+        version_file = os.path.join(BASE_DIR, "_version_check.txt")
+        check_bat = os.path.join(BASE_DIR, "do_version_check.bat")
+
+        # Clean up any previous version file
+        if os.path.exists(version_file):
+            os.remove(version_file)
+
+        with open(check_bat, "w", encoding="ascii") as f:
+            f.write(
+                '@echo off\r\n'
+                "powershell.exe -NonInteractive -Command "
+                "\"try { $r = Invoke-WebRequest -Uri '" + SERVER_URL + "/version' "
+                "-UseBasicParsing -TimeoutSec 180; "
+                "$r.Content | Out-File -Encoding ascii '%~dp0_version_check.txt' } "
+                "catch { 'ERROR' | Out-File -Encoding ascii '%~dp0_version_check.txt' }\"\r\n"
+                'del "%~0"\r\n'
+            )
+        os.startfile(check_bat)
+
+        # Wait for version check to complete (poll for result file)
         QMessageBox.information(
-            self, "Updating",
+            self, "Checking for Updates",
+            "Connecting to update server...\n"
+            "Click OK and please wait a moment.\n\n"
+            "(First connection may take up to 3 minutes\n"
+            "if the server is waking up.)")
+
+        # Poll for the version file
+        import time
+        server_version = None
+        for _ in range(360):  # up to 3 minutes
+            if os.path.exists(version_file):
+                time.sleep(0.5)  # let file finish writing
+                try:
+                    with open(version_file, "r") as vf:
+                        content = vf.read().strip()
+                    os.remove(version_file)
+                    if "ERROR" in content:
+                        QMessageBox.warning(self, "Update Check",
+                            "Could not connect to update server.\nPlease try again later.")
+                        return
+                    # Parse JSON to get version
+                    import json
+                    data = json.loads(content)
+                    server_version = data.get("version", "0")
+                except Exception:
+                    QMessageBox.warning(self, "Update Check",
+                        "Could not check for updates.\nPlease try again later.")
+                    return
+                break
+            time.sleep(0.5)
+
+        if server_version is None:
+            QMessageBox.warning(self, "Update Check",
+                "Connection timed out.\nPlease try again later.")
+            return
+
+        # Step 2: Compare versions
+        def parse_ver(v):
+            return tuple(int(x) for x in v.strip().split("."))
+
+        try:
+            if parse_ver(server_version) <= parse_ver(CURRENT_VERSION):
+                QMessageBox.information(self, "Update Check",
+                    "You are up to date!")
+                return
+        except Exception:
+            QMessageBox.warning(self, "Update Check",
+                "Could not parse version info.\nPlease try again later.")
+            return
+
+        # Step 3: Update available - confirm and proceed
+        QMessageBox.information(
+            self, "Update Available",
+            f"New version {server_version} available!\n"
             "Program will update and restart automatically.\n"
             "Click OK to continue.")
 
+        # Step 4: Create bulletproof update bat
         bat_path = os.path.join(BASE_DIR, "do_update.bat")
         with open(bat_path, "w", encoding="ascii") as f:
             f.write(
@@ -1902,7 +1980,7 @@ class LauncherPage(FrostBackground):
                 'echo Downloading update...\r\n'
                 # Download as main_new.py (PowerShell blocks until done)
                 "powershell.exe -NonInteractive -Command "
-                "\"Invoke-WebRequest -Uri 'https://chessgym-server.onrender.com/download' "
+                "\"Invoke-WebRequest -Uri '" + SERVER_URL + "/download' "
                 "-OutFile '%~dp0main_new.py'\"\r\n"
                 # Check if download succeeded
                 'if not exist "%~dp0main_new.py" (\r\n'
