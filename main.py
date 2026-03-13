@@ -157,17 +157,6 @@ else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     RESOURCE_DIR = BASE_DIR
 
-# -- Opening Trainer error logger --------------------------------------------
-_OT_LOG_PATH = os.path.join(BASE_DIR, "chessgym_errors.log")
-_ot_logger = logging.getLogger("chessgym")
-_ot_logger.setLevel(logging.DEBUG)
-try:
-    _ot_log_handler = logging.FileHandler(_OT_LOG_PATH, encoding="utf-8")
-    _ot_log_handler.setFormatter(logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(message)s"))
-    _ot_logger.addHandler(_ot_log_handler)
-except Exception:
-    pass  # If log file can't be opened, continue without file logging
 
 def _ot_excepthook(exc_type, exc_value, exc_tb):
     """Global exception handler — log to file and show friendly message."""
@@ -1023,7 +1012,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.15",
+    "version": "3.16",
 }
 
 def _load_config():
@@ -1878,7 +1867,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.15", self)
+        self._ver_lbl = QLabel("v3.16", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1914,7 +1903,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.15"
+        CURRENT_VERSION = "3.16"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2035,6 +2024,7 @@ class LauncherPage(FrostBackground):
                 ')\r\n'
                 # Rename new file
                 'rename "%~dp0main_new.py" "main.py"\r\n'
+                'timeout /t 5 /nobreak\r\n'
                 # Verify rename succeeded before relaunching
                 'if not exist "%~dp0main.py" (\r\n'
                 '    echo Rename failed. Update incomplete.\r\n'
