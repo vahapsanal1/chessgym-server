@@ -1887,45 +1887,24 @@ class LauncherPage(FrostBackground):
             pass
 
     def _do_update_check(self):
+        from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
-        self._update_btn.setEnabled(False)
-        self._update_btn.setText("Connecting to server, please wait...")
-        t = threading.Thread(target=self._update_check_bg, daemon=True)
-        t.start()
-
-    def _update_check_bg(self):
-        try:
-            ver, url = _check_for_update()
-        except Exception as e:
-            print(f"[Update] Check failed: {e}")
-            QTimer.singleShot(0, lambda: self._update_error(str(e)))
-            return
-        if ver and url:
-            QTimer.singleShot(0, lambda: self._update_found(ver, url))
-        else:
-            QTimer.singleShot(0, self._update_not_found)
-
-    def _update_found(self, ver, url):
-        from PyQt6.QtWidgets import QMessageBox
-        _launch_download_bat(url, ver)
+        # Create the .bat file
+        bat_path = os.path.join(BASE_DIR, "do_update.bat")
+        with open(bat_path, "w", encoding="ascii") as f:
+            f.write(
+                '@echo off\r\n'
+                "powershell.exe -NonInteractive -Command "
+                "\"Invoke-WebRequest -Uri 'https://chessgym-server.onrender.com/download' "
+                "-OutFile '%~dp0main.py'\"\r\n"
+                'del "%~0"\r\n'
+            )
+        os.startfile(bat_path)
         QMessageBox.information(
-            self, "Downloading Update",
-            f"Downloading v{ver} in the background.\n\n"
-            "Please reopen ChessGym after the download completes.")
+            self, "Updating",
+            "Update is downloading. ChessGym will now close.\n\n"
+            "Please reopen in 30 seconds.")
         sys.exit(0)
-
-    def _update_not_found(self):
-        from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.information(self, "Up to Date", "You are already on the latest version.")
-        self._update_btn.setText("Check for Updates")
-        self._update_btn.setEnabled(True)
-
-    def _update_error(self, msg):
-        from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.warning(self, "Update Check Failed",
-                            f"Could not reach the update server.\n\n{msg}")
-        self._update_btn.setText("Check for Updates")
-        self._update_btn.setEnabled(True)
 
     def _update_dots(self):
         # Inner glow colors per theme
@@ -7378,102 +7357,6 @@ class MainWindow(QMainWindow):
         event.accept()
 
 
-# -- Update system -----------------------------------------------------------
-_UPDATE_SERVER = "chessgym-server.onrender.com"
-
-
-def _socket_get(host, path, timeout=180):
-    """HTTPS GET using raw socket + ssl. Returns body bytes.
-    No urllib, no requests — just TCP + TLS + HTTP/1.1."""
-    import socket as _sock
-    sock = _sock.create_connection((host, 443), timeout=30)
-    try:
-        sock.settimeout(timeout)
-        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        wrapped = ctx.wrap_socket(sock, server_hostname=host)
-        wrapped.settimeout(timeout)
-        req = f"GET {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
-        wrapped.sendall(req.encode())
-        chunks = []
-        while True:
-            chunk = wrapped.recv(65536)
-            if not chunk:
-                break
-            chunks.append(chunk)
-        wrapped.close()
-    except Exception:
-        sock.close()
-        raise
-    raw = b"".join(chunks)
-    if b"\r\n\r\n" not in raw:
-        raise RuntimeError("Invalid HTTP response")
-    header_block, body = raw.split(b"\r\n\r\n", 1)
-    status_line = header_block.split(b"\r\n")[0].decode()
-    code = int(status_line.split()[1])
-    if code in (301, 302, 307, 308):
-        for hdr in header_block.split(b"\r\n")[1:]:
-            if hdr.lower().startswith(b"location:"):
-                loc = hdr.split(b":", 1)[1].strip().decode()
-                if loc.startswith("https://"):
-                    loc = loc[8:]
-                    rhost = loc.split("/")[0]
-                    rpath = "/" + loc.split("/", 1)[1] if "/" in loc else "/"
-                    return _socket_get(rhost, rpath, timeout)
-        raise RuntimeError(f"Redirect {code} with no Location header")
-    if code != 200:
-        raise RuntimeError(f"HTTP {code}: {status_line}")
-    return body
-
-
-def _check_for_update():
-    """Check version using raw socket. Returns (new_version, download_url) or raises."""
-    raw = _socket_get(_UPDATE_SERVER, "/version", timeout=180)
-    data = json.loads(raw.decode("utf-8"))
-    server_ver = data.get("version", "0")
-    download_url = data.get("download_url", "")
-    local_ver = _load_config().get("version", "1.0")
-    def _ver(v):
-        try: return tuple(int(x) for x in str(v).split("."))
-        except: return (0,)
-    if _ver(server_ver) > _ver(local_ver):
-        return server_ver, download_url
-    return None, None
-
-
-def _launch_download_bat(download_url, new_version):
-    """Create a .bat file that uses PowerShell to download main.py, then run it via os.startfile().
-    The .bat deletes itself when done."""
-    main_path = os.path.join(BASE_DIR, "main.py")
-    bat_path = os.path.join(BASE_DIR, "_chessgym_update.bat")
-    config_path = os.path.join(BASE_DIR, "chessgym_config.json")
-    bat_content = (
-        '@echo off\r\n'
-        'echo Downloading ChessGym update...\r\n'
-        'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "'
-        f"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; "
-        f"Invoke-WebRequest -Uri ''{download_url}'' -OutFile ''{main_path}'' -UseBasicParsing"
-        '"\r\n'
-        'if %ERRORLEVEL% NEQ 0 (\r\n'
-        '  echo Update failed!\r\n'
-        '  pause\r\n'
-        f'  del /f /q "{bat_path}"\r\n'
-        '  exit /b 1\r\n'
-        ')\r\n'
-        'echo Update downloaded successfully!\r\n'
-        'echo Please reopen ChessGym.\r\n'
-        'timeout /t 3 >nul\r\n'
-        f'del /f /q "{bat_path}"\r\n'
-    )
-    with open(bat_path, "w", encoding="ascii") as f:
-        f.write(bat_content)
-    # Update version in config before launching
-    cfg = _load_config()
-    cfg["version"] = new_version
-    _save_config(cfg)
-    # Launch the .bat — os.startfile works reliably from frozen EXEs
-    os.startfile(bat_path)
 
 
 # -- Entry point -------------------------------------------------------------
