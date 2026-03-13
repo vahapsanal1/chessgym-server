@@ -1023,7 +1023,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.0",
+    "version": "3.1",
 }
 
 def _load_config():
@@ -1854,9 +1854,9 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.0", self)
+        self._ver_lbl = QLabel("v3.1", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
-        self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
+        self._ver_lbl.setStyleSheet("color: rgba(255,165,0,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -1887,14 +1887,45 @@ class LauncherPage(FrostBackground):
             pass
 
     def _do_update_check(self):
-        import webbrowser
-        from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
+        self._update_btn.setEnabled(False)
+        self._update_btn.setText("Connecting to server, please wait...")
+        t = threading.Thread(target=self._update_check_bg, daemon=True)
+        t.start()
+
+    def _update_check_bg(self):
+        try:
+            ver, url = _check_for_update()
+        except Exception as e:
+            print(f"[Update] Check failed: {e}")
+            QTimer.singleShot(0, lambda: self._update_error(str(e)))
+            return
+        if ver and url:
+            QTimer.singleShot(0, lambda: self._update_found(ver, url))
+        else:
+            QTimer.singleShot(0, self._update_not_found)
+
+    def _update_found(self, ver, url):
+        from PyQt6.QtWidgets import QMessageBox
+        _launch_download_bat(url, ver)
         QMessageBox.information(
-            self, "Download Update",
-            "main.py will download to your Downloads folder.\n\n"
-            "Move it to your ChessGym folder and restart.")
-        webbrowser.open("https://chessgym-server.onrender.com/download")
+            self, "Downloading Update",
+            f"Downloading v{ver} in the background.\n\n"
+            "Please reopen ChessGym after the download completes.")
+        sys.exit(0)
+
+    def _update_not_found(self):
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "Up to Date", "You are already on the latest version.")
+        self._update_btn.setText("Check for Updates")
+        self._update_btn.setEnabled(True)
+
+    def _update_error(self, msg):
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.warning(self, "Update Check Failed",
+                            f"Could not reach the update server.\n\n{msg}")
+        self._update_btn.setText("Check for Updates")
+        self._update_btn.setEnabled(True)
 
     def _update_dots(self):
         # Inner glow colors per theme
@@ -7348,85 +7379,58 @@ class MainWindow(QMainWindow):
 
 
 # -- Update system -----------------------------------------------------------
-_UPDATE_SERVER = "https://chessgym-server.onrender.com"
-
-_POWERSHELL = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"),
-                           "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
+_UPDATE_SERVER = "chessgym-server.onrender.com"
 
 
-def _ps_run(ps_cmd, timeout=180):
-    """Run a PowerShell command inside a frozen EXE without hanging.
-    Writes stdout/stderr to temp files to avoid pipe deadlocks."""
-    tmp_out = os.path.join(tempfile.gettempdir(), "cg_ps_out.txt")
-    tmp_err = os.path.join(tempfile.gettempdir(), "cg_ps_err.txt")
-    # Wrap command to redirect output to files from inside PowerShell
-    wrapped = (
-        f"try {{ {ps_cmd} | Out-File -FilePath '{tmp_out}' -Encoding utf8 }} "
-        f"catch {{ $_.Exception.Message | Out-File -FilePath '{tmp_err}' -Encoding utf8; exit 1 }}"
-    )
-    si = subprocess.STARTUPINFO()
-    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    si.wShowWindow = 0  # SW_HIDE
-    # Clean temp files
-    for f in (tmp_out, tmp_err):
-        try: os.remove(f)
-        except: pass
-    proc = subprocess.Popen(
-        [_POWERSHELL, "-NoProfile", "-NonInteractive", "-Command", wrapped],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        startupinfo=si,
-        creationflags=0x08000000,     # CREATE_NO_WINDOW
-    )
+def _socket_get(host, path, timeout=180):
+    """HTTPS GET using raw socket + ssl. Returns body bytes.
+    No urllib, no requests — just TCP + TLS + HTTP/1.1."""
+    import socket as _sock
+    sock = _sock.create_connection((host, 443), timeout=30)
     try:
-        retcode = proc.wait(timeout=timeout + 10)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        raise TimeoutError(f"PowerShell timed out after {timeout}s")
-    if retcode != 0:
-        err = ""
-        try:
-            with open(tmp_err, "r", encoding="utf-8-sig") as f:
-                err = f.read().strip()
-        except: pass
-        raise RuntimeError(err or f"PowerShell exited with code {retcode}")
-    # Read output
-    out = ""
-    try:
-        with open(tmp_out, "r", encoding="utf-8-sig") as f:
-            out = f.read().strip()
-    except: pass
-    # Clean up
-    for f in (tmp_out, tmp_err):
-        try: os.remove(f)
-        except: pass
-    return out
-
-
-def _ps_fetch(url, timeout=180):
-    """Fetch a URL using PowerShell. Returns the response body as a string."""
-    ps_cmd = (
-        f"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; "
-        f"(Invoke-WebRequest -Uri '{url}' -UseBasicParsing -TimeoutSec {timeout}).Content"
-    )
-    return _ps_run(ps_cmd, timeout=timeout)
-
-
-def _ps_download(url, output_path, timeout=180):
-    """Download a file using PowerShell Invoke-WebRequest."""
-    ps_cmd = (
-        f"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; "
-        f"Invoke-WebRequest -Uri '{url}' -OutFile '{output_path}' -UseBasicParsing -TimeoutSec {timeout}"
-    )
-    _ps_run(ps_cmd, timeout=timeout)
+        sock.settimeout(timeout)
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        wrapped = ctx.wrap_socket(sock, server_hostname=host)
+        wrapped.settimeout(timeout)
+        req = f"GET {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
+        wrapped.sendall(req.encode())
+        chunks = []
+        while True:
+            chunk = wrapped.recv(65536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        wrapped.close()
+    except Exception:
+        sock.close()
+        raise
+    raw = b"".join(chunks)
+    if b"\r\n\r\n" not in raw:
+        raise RuntimeError("Invalid HTTP response")
+    header_block, body = raw.split(b"\r\n\r\n", 1)
+    status_line = header_block.split(b"\r\n")[0].decode()
+    code = int(status_line.split()[1])
+    if code in (301, 302, 307, 308):
+        for hdr in header_block.split(b"\r\n")[1:]:
+            if hdr.lower().startswith(b"location:"):
+                loc = hdr.split(b":", 1)[1].strip().decode()
+                if loc.startswith("https://"):
+                    loc = loc[8:]
+                    rhost = loc.split("/")[0]
+                    rpath = "/" + loc.split("/", 1)[1] if "/" in loc else "/"
+                    return _socket_get(rhost, rpath, timeout)
+        raise RuntimeError(f"Redirect {code} with no Location header")
+    if code != 200:
+        raise RuntimeError(f"HTTP {code}: {status_line}")
+    return body
 
 
 def _check_for_update():
-    """Check the update server for a newer version.
-    Returns (new_version, download_url) or raises on failure."""
-    raw = _ps_fetch(f"{_UPDATE_SERVER}/version", timeout=180)
-    data = json.loads(raw)
+    """Check version using raw socket. Returns (new_version, download_url) or raises."""
+    raw = _socket_get(_UPDATE_SERVER, "/version", timeout=180)
+    data = json.loads(raw.decode("utf-8"))
     server_ver = data.get("version", "0")
     download_url = data.get("download_url", "")
     local_ver = _load_config().get("version", "1.0")
@@ -7438,37 +7442,38 @@ def _check_for_update():
     return None, None
 
 
-def _download_and_apply_update(download_url, new_version):
-    """Download the update ZIP and replace only main.py. Returns True on success."""
-    zip_path = os.path.join(BASE_DIR, "ChessGym_update.zip")
-    try:
-        _ps_download(download_url, zip_path, timeout=180)
-
-        if not zipfile.is_zipfile(zip_path):
-            os.remove(zip_path)
-            raise RuntimeError("Downloaded file is not a valid ZIP")
-
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            if "main.py" not in zf.namelist():
-                os.remove(zip_path)
-                raise RuntimeError("main.py not found in update ZIP")
-            zf.extract("main.py", BASE_DIR)
-
-        # Update version in config
-        cfg = _load_config()
-        cfg["version"] = new_version
-        _save_config(cfg)
-
-        # Clean up
-        try: os.remove(zip_path)
-        except: pass
-
-        print(f"[Update] Successfully updated to v{new_version}")
-        return True
-    except Exception:
-        try: os.remove(zip_path)
-        except: pass
-        raise
+def _launch_download_bat(download_url, new_version):
+    """Create a .bat file that uses PowerShell to download main.py, then run it via os.startfile().
+    The .bat deletes itself when done."""
+    main_path = os.path.join(BASE_DIR, "main.py")
+    bat_path = os.path.join(BASE_DIR, "_chessgym_update.bat")
+    config_path = os.path.join(BASE_DIR, "chessgym_config.json")
+    bat_content = (
+        '@echo off\r\n'
+        'echo Downloading ChessGym update...\r\n'
+        'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "'
+        f"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; "
+        f"Invoke-WebRequest -Uri ''{download_url}'' -OutFile ''{main_path}'' -UseBasicParsing"
+        '"\r\n'
+        'if %ERRORLEVEL% NEQ 0 (\r\n'
+        '  echo Update failed!\r\n'
+        '  pause\r\n'
+        f'  del /f /q "{bat_path}"\r\n'
+        '  exit /b 1\r\n'
+        ')\r\n'
+        'echo Update downloaded successfully!\r\n'
+        'echo Please reopen ChessGym.\r\n'
+        'timeout /t 3 >nul\r\n'
+        f'del /f /q "{bat_path}"\r\n'
+    )
+    with open(bat_path, "w", encoding="ascii") as f:
+        f.write(bat_content)
+    # Update version in config before launching
+    cfg = _load_config()
+    cfg["version"] = new_version
+    _save_config(cfg)
+    # Launch the .bat — os.startfile works reliably from frozen EXEs
+    os.startfile(bat_path)
 
 
 # -- Entry point -------------------------------------------------------------
@@ -7532,7 +7537,7 @@ def main():
         if "version" not in cfg:
             cfg["version"] = "2.3"
             _save_config(cfg)
-            print("[Update] No version in config — set to 3.0")
+            print("[Update] No version in config — set to 3.1")
     except Exception:
         pass
 
