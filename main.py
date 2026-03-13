@@ -1915,7 +1915,8 @@ class LauncherPage(FrostBackground):
         play_menu_click()
 
         CURRENT_VERSION = "3.9"
-        SERVER_URL = "https://chessgym-server.onrender.com"
+        VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
+        DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
         # Step 1: Check version via PowerShell (bat that writes result to temp file)
         version_file = os.path.join(BASE_DIR, "_version_check.txt")
@@ -1929,8 +1930,8 @@ class LauncherPage(FrostBackground):
             f.write(
                 '@echo off\r\n'
                 "powershell.exe -NonInteractive -Command "
-                "\"try { $r = Invoke-WebRequest -Uri '" + SERVER_URL + "/version' "
-                "-UseBasicParsing -TimeoutSec 180; "
+                "\"try { $r = Invoke-WebRequest -Uri '" + VERSION_URL + "' "
+                "-UseBasicParsing -TimeoutSec 30; "
                 "$r.Content | Out-File -Encoding ascii '%~dp0_version_check.txt' } "
                 "catch { 'ERROR' | Out-File -Encoding ascii '%~dp0_version_check.txt' }\"\r\n"
                 'del "%~0"\r\n'
@@ -1940,10 +1941,8 @@ class LauncherPage(FrostBackground):
         # Wait for version check to complete (poll for result file)
         QMessageBox.information(
             self, "Checking for Updates",
-            "Connecting to update server...\n"
-            "Click OK and please wait a moment.\n\n"
-            "(First connection may take up to 3 minutes\n"
-            "if the server is waking up.)")
+            "Checking for updates...\n"
+            "Click OK and please wait a moment.")
 
         # Poll for the version file
         import time
@@ -2004,7 +2003,7 @@ class LauncherPage(FrostBackground):
                 'echo Downloading update...\r\n'
                 # Download as main_new.py (PowerShell blocks until done)
                 "powershell.exe -NonInteractive -Command "
-                "\"Invoke-WebRequest -Uri '" + SERVER_URL + "/download' "
+                "\"Invoke-WebRequest -Uri '" + DOWNLOAD_URL + "' "
                 "-OutFile '%~dp0main_new.py'\"\r\n"
                 # Check if download succeeded
                 'if not exist "%~dp0main_new.py" (\r\n'
