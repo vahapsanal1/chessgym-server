@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.21",
+    "version": "3.22",
 }
 
 def _load_config():
@@ -1879,7 +1879,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.21", self)
+        self._ver_lbl = QLabel("v3.22", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1915,7 +1915,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.21"
+        CURRENT_VERSION = "3.22"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -1989,74 +1989,86 @@ class LauncherPage(FrostBackground):
                 "Could not parse version info.\nPlease try again later.")
             return
 
-        # Step 3: Update available - confirm and proceed
+        # Step 3: Update available - download via bat
         QMessageBox.information(
             self, "Update Available",
             f"New version {server_version} available!\n"
-            "Program will update and restart automatically.\n"
-            "Click OK to continue.")
+            "Click OK to download the update.")
 
-        # Step 4: Create bulletproof update bat using hardcoded absolute paths
-        # (avoids %~dp0 resolution issues with os.startfile)
+        # Step 4: Create download bat using hardcoded absolute paths
         bat_path = os.path.join(BASE_DIR, "do_update.bat")
         main_new = os.path.join(BASE_DIR, "main_new.py").replace("/", "\\")
         main_old = os.path.join(BASE_DIR, "main.py").replace("/", "\\")
-        exe_path = os.path.join(BASE_DIR, "ChessGym.exe").replace("/", "\\")
         bat_abs = bat_path.replace("/", "\\")
+        # Write result to a status file so we can check outcome
+        status_file = os.path.join(BASE_DIR, "_update_status.txt").replace("/", "\\")
 
         with open(bat_path, "w", encoding="ascii") as f:
             f.write(
                 '@echo off\r\n'
-                'echo Downloading update...\r\n'
                 # Download as main_new.py (PowerShell blocks until done)
                 'powershell.exe -NonInteractive -Command '
                 '"Invoke-WebRequest -Uri \'' + DOWNLOAD_URL + '\' '
                 '-OutFile \'' + main_new + '\'"\r\n'
                 # Check if download succeeded
                 'if not exist "' + main_new + '" (\r\n'
-                '    echo Download failed. Keeping current version.\r\n'
-                '    pause\r\n'
+                '    echo FAIL > "' + status_file + '"\r\n'
                 '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
                 # Check file is not empty
                 'for %%A in ("' + main_new + '") do if %%~zA==0 (\r\n'
-                '    echo Download failed - empty file. Keeping current version.\r\n'
                 '    del "' + main_new + '"\r\n'
-                '    pause\r\n'
+                '    echo FAIL > "' + status_file + '"\r\n'
                 '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
-                # Wait for ChessGym to fully close
-                'timeout /t 3 /nobreak\r\n'
-                # Delete old main.py
+                # Delete old main.py and replace
                 'if exist "' + main_old + '" del "' + main_old + '"\r\n'
-                # Verify old file is gone
                 'if exist "' + main_old + '" (\r\n'
-                '    echo Could not delete old main.py - file may be locked.\r\n'
                 '    del "' + main_new + '"\r\n'
-                '    pause\r\n'
+                '    echo FAIL > "' + status_file + '"\r\n'
                 '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
-                # Rename new file (rename needs just filename as 2nd arg)
                 'move "' + main_new + '" "' + main_old + '"\r\n'
-                # Verify rename succeeded
                 'if not exist "' + main_old + '" (\r\n'
-                '    echo Rename failed. Update incomplete.\r\n'
-                '    pause\r\n'
+                '    echo FAIL > "' + status_file + '"\r\n'
                 '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
-                # Clear env var so bootstrapper loads external main.py
-                'set _CHESSGYM_EXTERNAL=\r\n'
-                # Relaunch ChessGym (delay lets filesystem flush the move)
-                'timeout /t 2 /nobreak\r\n'
-                'start "" "' + exe_path + '"\r\n'
+                'echo OK > "' + status_file + '"\r\n'
                 'del "' + bat_abs + '"\r\n'
             )
         os.startfile(bat_path)
-        os._exit(0)
+
+        # Poll for status file
+        import time
+        status_path = status_file.replace("\\", os.sep)
+        result = None
+        for _ in range(360):  # up to 3 minutes
+            if os.path.exists(status_path):
+                time.sleep(0.3)
+                try:
+                    with open(status_path, "r") as sf:
+                        result = sf.read().strip()
+                    os.remove(status_path)
+                except Exception:
+                    pass
+                break
+            time.sleep(0.5)
+
+        if result == "OK":
+            QMessageBox.information(self, "Update Complete",
+                "Update completed!\n"
+                "Please restart the program for changes to apply.")
+        elif result == "FAIL":
+            QMessageBox.warning(self, "Update Failed",
+                "Update failed. Your current version is unchanged.\n"
+                "Please try again later.")
+        else:
+            QMessageBox.warning(self, "Update",
+                "Update timed out.\nPlease try again later.")
 
     def _update_dots(self):
         # Inner glow colors per theme
