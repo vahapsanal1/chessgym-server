@@ -1890,21 +1890,37 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
         # Create the .bat file
-        bat_path = os.path.join(BASE_DIR, "do_update.bat")
-        with open(bat_path, "w", encoding="ascii") as f:
+        # Step 1: Download main_new.py via PowerShell bat
+        dl_bat = os.path.join(BASE_DIR, "do_download.bat")
+        with open(dl_bat, "w", encoding="ascii") as f:
             f.write(
                 '@echo off\r\n'
                 "powershell.exe -NonInteractive -Command "
                 "\"Invoke-WebRequest -Uri 'https://chessgym-server.onrender.com/download' "
-                "-OutFile '%~dp0main.py'\"\r\n"
+                "-OutFile '%~dp0main_new.py'\"\r\n"
                 'del "%~0"\r\n'
             )
-        os.startfile(bat_path)
+        os.startfile(dl_bat)
+
+        # Step 2: Create swap bat (waits 3s for ChessGym to close, then swaps files)
+        swap_bat = os.path.join(BASE_DIR, "do_update.bat")
+        with open(swap_bat, "w", encoding="ascii") as f:
+            f.write(
+                '@echo off\r\n'
+                'timeout /t 3 /nobreak\r\n'
+                'del "%~dp0main.py"\r\n'
+                'rename "%~dp0main_new.py" "main.py"\r\n'
+                'del "%~0"\r\n'
+            )
+
         QMessageBox.information(
             self, "Updating",
             "Update is downloading. ChessGym will now close.\n\n"
             "Please reopen in 30 seconds.")
-        sys.exit(0)
+
+        # Step 3: Launch swap bat then force-exit
+        os.startfile(swap_bat)
+        os._exit(0)
 
     def _update_dots(self):
         # Inner glow colors per theme
