@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.35",
+    "version": "3.36",
 }
 
 def _load_config():
@@ -1875,7 +1875,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.35", self)
+        self._ver_lbl = QLabel("v3.36", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1950,7 +1950,7 @@ class LauncherPage(FrostBackground):
                             return
                         data = json.loads(content)
                         server_ver = data.get("version", "0")
-                        current_ver = "3.35"
+                        current_ver = "3.36"
                         sv = tuple(int(x) for x in server_ver.strip().split("."))
                         cv = tuple(int(x) for x in current_ver.strip().split("."))
                         if sv > cv:
@@ -1970,11 +1970,10 @@ class LauncherPage(FrostBackground):
         self._update_btn.setFont(QFont(_UI_FONT, 12, QFont.Weight.Medium))
         self._update_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._update_btn.setStyleSheet(
-            "QPushButton { background: rgba(30,35,45,0.92); color: #ffffff; "
-            "border: 1px solid rgba(220,100,20,0.6); border-radius: 20px; "
+            "QPushButton { background: rgba(220,100,20,0.9); color: #ffffff; "
+            "border: none; border-radius: 20px; "
             "padding: 8px 22px; font-size: 13px; } "
-            "QPushButton:hover { background: rgba(40,45,55,0.96); "
-            "border: 1px solid rgba(220,100,20,0.85); }")
+            "QPushButton:hover { background: rgba(220,100,20,1.0); }")
         self._update_btn.clicked.connect(lambda checked: self._do_update_check())
         self._update_btn.adjustSize()
         self._update_btn.show()
@@ -1984,7 +1983,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.35"
+        CURRENT_VERSION = "3.36"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2071,7 +2070,7 @@ class LauncherPage(FrostBackground):
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.35"
+        CURRENT_VERSION = "3.36"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
         def parse_ver(v):
