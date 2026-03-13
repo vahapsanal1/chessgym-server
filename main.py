@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.18",
+    "version": "3.19",
 }
 
 def _load_config():
@@ -1879,7 +1879,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.18", self)
+        self._ver_lbl = QLabel("v3.19", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1915,7 +1915,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.18"
+        CURRENT_VERSION = "3.19"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -1996,56 +1996,61 @@ class LauncherPage(FrostBackground):
             "Program will update and restart automatically.\n"
             "Click OK to continue.")
 
-        # Step 4: Create bulletproof update bat
+        # Step 4: Create bulletproof update bat using hardcoded absolute paths
+        # (avoids %~dp0 resolution issues with os.startfile)
         bat_path = os.path.join(BASE_DIR, "do_update.bat")
+        main_new = os.path.join(BASE_DIR, "main_new.py").replace("/", "\\")
+        main_old = os.path.join(BASE_DIR, "main.py").replace("/", "\\")
+        exe_path = os.path.join(BASE_DIR, "ChessGym.exe").replace("/", "\\")
+        bat_abs = bat_path.replace("/", "\\")
+
         with open(bat_path, "w", encoding="ascii") as f:
             f.write(
                 '@echo off\r\n'
                 'echo Downloading update...\r\n'
                 # Download as main_new.py (PowerShell blocks until done)
-                "powershell.exe -NonInteractive -Command "
-                "\"Invoke-WebRequest -Uri '" + DOWNLOAD_URL + "' "
-                "-OutFile '%~dp0main_new.py'\"\r\n"
+                'powershell.exe -NonInteractive -Command '
+                '"Invoke-WebRequest -Uri \'' + DOWNLOAD_URL + '\' '
+                '-OutFile \'' + main_new + '\'"\r\n'
                 # Check if download succeeded
-                'if not exist "%~dp0main_new.py" (\r\n'
+                'if not exist "' + main_new + '" (\r\n'
                 '    echo Download failed. Keeping current version.\r\n'
                 '    pause\r\n'
-                '    del "%~0"\r\n'
+                '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
-                # Check file is not empty (0 bytes = failed download)
-                'for %%A in ("%~dp0main_new.py") do if %%~zA==0 (\r\n'
+                # Check file is not empty
+                'for %%A in ("' + main_new + '") do if %%~zA==0 (\r\n'
                 '    echo Download failed - empty file. Keeping current version.\r\n'
-                '    del "%~dp0main_new.py"\r\n'
+                '    del "' + main_new + '"\r\n'
                 '    pause\r\n'
-                '    del "%~0"\r\n'
+                '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
-                # Wait for ChessGym to fully close (download takes time,
-                # so ChessGym is likely already closed by now, but just in case)
+                # Wait for ChessGym to fully close
                 'timeout /t 3 /nobreak\r\n'
                 # Delete old main.py
-                'if exist "%~dp0main.py" del "%~dp0main.py"\r\n'
-                # Verify old file is gone before renaming
-                'if exist "%~dp0main.py" (\r\n'
+                'if exist "' + main_old + '" del "' + main_old + '"\r\n'
+                # Verify old file is gone
+                'if exist "' + main_old + '" (\r\n'
                 '    echo Could not delete old main.py - file may be locked.\r\n'
-                '    del "%~dp0main_new.py"\r\n'
+                '    del "' + main_new + '"\r\n'
                 '    pause\r\n'
-                '    del "%~0"\r\n'
+                '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
-                # Rename new file
-                'rename "%~dp0main_new.py" "main.py"\r\n'
-                # Verify rename succeeded before relaunching
-                'if not exist "%~dp0main.py" (\r\n'
+                # Rename new file (rename needs just filename as 2nd arg)
+                'move "' + main_new + '" "' + main_old + '"\r\n'
+                # Verify rename succeeded
+                'if not exist "' + main_old + '" (\r\n'
                 '    echo Rename failed. Update incomplete.\r\n'
                 '    pause\r\n'
-                '    del "%~0"\r\n'
+                '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
                 # Relaunch ChessGym
-                'start "" "%~dp0ChessGym.exe"\r\n'
-                'del "%~0"\r\n'
+                'start "" "' + exe_path + '"\r\n'
+                'del "' + bat_abs + '"\r\n'
             )
         os.startfile(bat_path)
         os._exit(0)
