@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.26",
+    "version": "3.27",
 }
 
 def _load_config():
@@ -1835,6 +1835,32 @@ class LauncherPage(FrostBackground):
         self._update_btn.clicked.connect(lambda checked: self._do_update_check())
         btn_col.addWidget(self._update_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
+        # Update notification (hidden by default, shown if new version found)
+        notif_row = QHBoxLayout()
+        notif_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        notif_row.setSpacing(8)
+        self._notif_dot = QLabel("●", self)
+        self._notif_dot.setFont(QFont(_UI_FONT, 10))
+        self._notif_dot.setStyleSheet("color: rgba(255,100,60,0.9); background: transparent;")
+        self._notif_lbl = QLabel("New update available", self)
+        self._notif_lbl.setFont(QFont(_UI_FONT, 11, QFont.Weight.Normal))
+        self._notif_lbl.setStyleSheet(
+            f"color: {T['text_muted']}; background: transparent;")
+        notif_row.addWidget(self._notif_dot)
+        notif_row.addWidget(self._notif_lbl)
+        self._notif_dot.hide()
+        self._notif_lbl.hide()
+        btn_col.addLayout(notif_row)
+
+        # Pulse animation for the dot
+        self._notif_pulse_on = True
+        self._notif_pulse_timer = QTimer(self)
+        self._notif_pulse_timer.timeout.connect(self._pulse_notif_dot)
+        self._notif_pulse_timer.setInterval(800)
+
+        # Silent background version check
+        self._start_silent_version_check()
+
         outer.addLayout(btn_col)
         outer.addStretch(3)
 
@@ -1879,7 +1905,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.26", self)
+        self._ver_lbl = QLabel("v3.27", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1911,11 +1937,49 @@ class LauncherPage(FrostBackground):
         except Exception:
             pass
 
+    def _start_silent_version_check(self):
+        """Check for updates silently in a background thread."""
+        import threading
+        def _check():
+            try:
+                import requests
+                r = requests.get(
+                    "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json",
+                    timeout=15)
+                r.raise_for_status()
+                import json
+                data = json.loads(r.text)
+                server_ver = data.get("version", "0")
+                current_ver = "3.27"
+                sv = tuple(int(x) for x in server_ver.strip().split("."))
+                cv = tuple(int(x) for x in current_ver.strip().split("."))
+                if sv > cv:
+                    QTimer.singleShot(0, self._show_update_notif)
+            except Exception:
+                pass  # silently fail
+        t = threading.Thread(target=_check, daemon=True)
+        t.start()
+
+    def _show_update_notif(self):
+        """Show the update notification dot and label."""
+        if hasattr(self, '_notif_dot') and not _qt_deleted(self._notif_dot):
+            self._notif_dot.show()
+            self._notif_lbl.show()
+            self._notif_pulse_timer.start()
+
+    def _pulse_notif_dot(self):
+        """Toggle dot opacity for a gentle pulse effect."""
+        if hasattr(self, '_notif_dot') and not _qt_deleted(self._notif_dot):
+            self._notif_pulse_on = not self._notif_pulse_on
+            alpha = "0.9" if self._notif_pulse_on else "0.3"
+            self._notif_dot.setStyleSheet(
+                f"color: rgba(255,100,60,{alpha}); background: transparent;")
+
     def _do_update_check(self):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.26"
+        CURRENT_VERSION = "3.27"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -1937,63 +2001,90 @@ class LauncherPage(FrostBackground):
                 "catch { 'ERROR' | Out-File -Encoding ascii '%~dp0_version_check.txt' }\"\r\n"
                 'del "%~0"\r\n'
             )
-        os.startfile(check_bat)
+        # Run bat hidden via VBScript wrapper (no black window)
+        vbs_path = os.path.join(BASE_DIR, "_run_hidden.vbs")
+        with open(vbs_path, "w", encoding="ascii") as f:
+            f.write('CreateObject("Wscript.Shell").Run "' +
+                    check_bat.replace("/", "\\") + '", 0, False\r\n'
+                    'CreateObject("Scripting.FileSystemObject").DeleteFile WScript.ScriptFullName\r\n')
+        os.startfile(vbs_path)
 
-        # Wait for version check to complete (poll for result file)
-        QMessageBox.information(
-            self, "Checking for Updates",
-            "Checking for updates...\n"
-            "Click OK and please wait a moment.")
+        # Show "Checking..." on button, disable it
+        self._update_btn.setText("Checking...")
+        self._update_btn.setEnabled(False)
 
-        # Poll for the version file
-        import time
-        server_version = None
-        for _ in range(360):  # up to 3 minutes
-            if os.path.exists(version_file):
-                time.sleep(0.5)  # let file finish writing
-                try:
-                    with open(version_file, "r") as vf:
-                        content = vf.read().strip()
-                    os.remove(version_file)
-                    if "ERROR" in content:
-                        QMessageBox.warning(self, "Update Check",
-                            "Could not connect to update server.\nPlease try again later.")
-                        return
-                    # Parse JSON to get version
-                    import json
-                    data = json.loads(content)
-                    server_version = data.get("version", "0")
-                except Exception:
-                    QMessageBox.warning(self, "Update Check",
-                        "Could not check for updates.\nPlease try again later.")
+        # Poll for the version file using QTimer (non-blocking)
+        self._vc_file = version_file
+        self._vc_attempts = 0
+        self._vc_timer = QTimer(self)
+        self._vc_timer.timeout.connect(self._poll_version_check)
+        self._vc_timer.start(500)
+        return
+
+    def _poll_version_check(self):
+        from PyQt6.QtWidgets import QMessageBox
+        self._vc_attempts += 1
+
+        if os.path.exists(self._vc_file):
+            self._vc_timer.stop()
+            import time
+            time.sleep(0.3)  # let file finish writing
+            try:
+                with open(self._vc_file, "r") as vf:
+                    content = vf.read().strip()
+                os.remove(self._vc_file)
+                if "ERROR" in content:
+                    self._reset_update_btn()
+                    QMessageBox.warning(self, "ChessGym",
+                        "Could not connect. Please try again later.")
                     return
-                break
-            time.sleep(0.5)
+                import json
+                data = json.loads(content)
+                server_version = data.get("version", "0")
+            except Exception:
+                self._reset_update_btn()
+                QMessageBox.warning(self, "ChessGym",
+                    "Could not check for updates.\nPlease try again later.")
+                return
 
-        if server_version is None:
-            QMessageBox.warning(self, "Update Check",
-                "Connection timed out.\nPlease try again later.")
+            self._reset_update_btn()
+            self._handle_version_result(server_version)
             return
 
-        # Step 2: Compare versions
+        if self._vc_attempts >= 360:  # 3 minutes
+            self._vc_timer.stop()
+            self._reset_update_btn()
+            QMessageBox.warning(self, "ChessGym",
+                "Connection timed out.\nPlease try again later.")
+
+    def _reset_update_btn(self):
+        self._update_btn.setText("Check for Updates")
+        self._update_btn.setEnabled(True)
+
+    def _handle_version_result(self, server_version):
+        from PyQt6.QtWidgets import QMessageBox
+
+        CURRENT_VERSION = "3.27"
+        DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
+
         def parse_ver(v):
             return tuple(int(x) for x in v.strip().split("."))
 
         try:
             if parse_ver(server_version) <= parse_ver(CURRENT_VERSION):
-                QMessageBox.information(self, "Update Check",
-                    "You are up to date!")
+                QMessageBox.information(self, "ChessGym",
+                    "You're up to date!")
                 return
         except Exception:
-            QMessageBox.warning(self, "Update Check",
-                "Could not parse version info.\nPlease try again later.")
+            QMessageBox.warning(self, "ChessGym",
+                "Something went wrong.\nPlease try again later.")
             return
 
-        # Step 3: Update available - download via bat
+        # Update available - download via bat
         QMessageBox.information(
-            self, "Update Available",
-            f"New version {server_version} available!\n"
-            "Click OK to download the update.")
+            self, "ChessGym",
+            f"Version {server_version} is available!\n"
+            "Click OK to update.")
 
         # Step 4: Create download bat using hardcoded absolute paths
         bat_path = os.path.join(BASE_DIR, "do_update.bat")
@@ -2041,7 +2132,13 @@ class LauncherPage(FrostBackground):
                 'echo OK > "' + status_file + '"\r\n'
                 'del "' + bat_abs + '"\r\n'
             )
-        os.startfile(bat_path)
+        # Run bat hidden via VBScript wrapper (no black window)
+        vbs_path2 = os.path.join(BASE_DIR, "_run_hidden2.vbs")
+        with open(vbs_path2, "w", encoding="ascii") as f:
+            f.write('CreateObject("Wscript.Shell").Run "' +
+                    bat_abs + '", 0, False\r\n'
+                    'CreateObject("Scripting.FileSystemObject").DeleteFile WScript.ScriptFullName\r\n')
+        os.startfile(vbs_path2)
 
         # Poll for status file
         import time
@@ -2060,9 +2157,8 @@ class LauncherPage(FrostBackground):
             time.sleep(0.5)
 
         if result == "OK":
-            QMessageBox.information(self, "Update Complete",
-                "Update complete!\n"
-                "The app will now restart to apply changes.")
+            QMessageBox.information(self, "ChessGym",
+                "Update complete! The app will now restart.")
             # Relaunch via bat with clean environment
             relaunch_bat = os.path.join(BASE_DIR, "do_relaunch.bat")
             relaunch_abs = relaunch_bat.replace("/", "\\")
@@ -2074,15 +2170,20 @@ class LauncherPage(FrostBackground):
                     'start "" "' + exe_path + '"\r\n'
                     'del "' + relaunch_abs + '"\r\n'
                 )
-            os.startfile(relaunch_bat)
+            # Run bat hidden via VBScript wrapper (no black window)
+            vbs_path3 = os.path.join(BASE_DIR, "_run_hidden3.vbs")
+            with open(vbs_path3, "w", encoding="ascii") as f:
+                f.write('CreateObject("Wscript.Shell").Run "' +
+                        relaunch_abs + '", 0, False\r\n'
+                        'CreateObject("Scripting.FileSystemObject").DeleteFile WScript.ScriptFullName\r\n')
+            os.startfile(vbs_path3)
             os._exit(0)
         elif result == "FAIL":
-            QMessageBox.warning(self, "Update Failed",
-                "Update failed. Your current version is unchanged.\n"
-                "Please try again later.")
+            QMessageBox.warning(self, "ChessGym",
+                "Update failed. Please try again later.")
         else:
-            QMessageBox.warning(self, "Update",
-                "Update timed out.\nPlease try again later.")
+            QMessageBox.warning(self, "ChessGym",
+                "Update timed out. Please try again later.")
 
     def _update_dots(self):
         # Inner glow colors per theme
