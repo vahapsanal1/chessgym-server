@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.19",
+    "version": "3.20",
 }
 
 def _load_config():
@@ -1879,7 +1879,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.19", self)
+        self._ver_lbl = QLabel("v3.20", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1915,7 +1915,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.19"
+        CURRENT_VERSION = "3.20"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2048,7 +2048,8 @@ class LauncherPage(FrostBackground):
                 '    del "' + bat_abs + '"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
-                # Relaunch ChessGym
+                # Relaunch ChessGym (delay lets filesystem flush the move)
+                'timeout /t 2 /nobreak\r\n'
                 'start "" "' + exe_path + '"\r\n'
                 'del "' + bat_abs + '"\r\n'
             )
@@ -7615,12 +7616,21 @@ if __name__ == "__main__":
     # contains this same bootstrapper).
     if getattr(sys, 'frozen', False) and not os.environ.get('_CHESSGYM_EXTERNAL'):
         _ext_main = os.path.join(os.path.dirname(sys.executable), "main.py")
-        if os.path.isfile(_ext_main):
-            os.environ['_CHESSGYM_EXTERNAL'] = '1'
-            _ns = {"__name__": "__main__", "__file__": _ext_main}
-            with open(_ext_main, "r", encoding="utf-8") as _f:
-                _code = compile(_f.read(), _ext_main, "exec")
-            exec(_code, _ns)
-            sys.exit(0)
+        # Retry a few times in case the updater is still writing/moving the file
+        import time as _time
+        for _attempt in range(5):
+            if os.path.isfile(_ext_main):
+                try:
+                    os.environ['_CHESSGYM_EXTERNAL'] = '1'
+                    _ns = {"__name__": "__main__", "__file__": _ext_main}
+                    with open(_ext_main, "r", encoding="utf-8") as _f:
+                        _code = compile(_f.read(), _ext_main, "exec")
+                    exec(_code, _ns)
+                    sys.exit(0)
+                except (IOError, OSError, PermissionError):
+                    _time.sleep(1)
+                    continue
+            else:
+                break
     # ──────────────────────────────────────────────────────────────────
     main()
