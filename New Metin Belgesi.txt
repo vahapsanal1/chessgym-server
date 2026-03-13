@@ -1,0 +1,4 @@
+{
+  "version": "1.1",
+  "download_url": "https://www.dropbox.com/scl/fi/pvhko9vcx39dmjc72t3es/ChessGym_v1.0.zip?rlkey=ym6jwk8obfcfjnhdx32jjmtdx&st=skn5zdka&dl=1"
+}
