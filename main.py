@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.29",
+    "version": "3.30",
 }
 
 def _load_config():
@@ -1814,7 +1814,7 @@ class LauncherPage(FrostBackground):
         outer.addSpacing(24)
 
         # Menu buttons — centered column, wide
-        btn_col = QVBoxLayout()
+        self._btn_col = btn_col = QVBoxLayout()
         btn_col.setSpacing(10)
         btn_col.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -1828,37 +1828,7 @@ class LauncherPage(FrostBackground):
             btn.clicked.connect(lambda checked, s=signal: (play_menu_click(), self.finished.emit(s)))
             btn_col.addWidget(btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        # Check for Updates button
-        self._update_btn = MenuButton("Check for Updates")
-        self._update_btn.setMinimumWidth(480)
-        self._update_btn.setMaximumWidth(540)
-        self._update_btn.clicked.connect(lambda checked: self._do_update_check())
-        btn_col.addWidget(self._update_btn, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        # Update notification (hidden by default, shown if new version found)
-        notif_row = QHBoxLayout()
-        notif_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        notif_row.setSpacing(8)
-        self._notif_dot = QLabel("●", self)
-        self._notif_dot.setFont(QFont(_UI_FONT, 10))
-        self._notif_dot.setStyleSheet("color: rgba(255,100,60,0.9); background: transparent;")
-        self._notif_lbl = QLabel("New update available", self)
-        self._notif_lbl.setFont(QFont(_UI_FONT, 11, QFont.Weight.Normal))
-        self._notif_lbl.setStyleSheet(
-            f"color: {T['text_muted']}; background: transparent;")
-        notif_row.addWidget(self._notif_dot)
-        notif_row.addWidget(self._notif_lbl)
-        self._notif_dot.hide()
-        self._notif_lbl.hide()
-        btn_col.addLayout(notif_row)
-
-        # Pulse animation for the dot
-        self._notif_pulse_on = True
-        self._notif_pulse_timer = QTimer(self)
-        self._notif_pulse_timer.timeout.connect(self._pulse_notif_dot)
-        self._notif_pulse_timer.setInterval(800)
-
-        # Silent background version check
+        # Silent background version check (button added dynamically if update found)
         self._start_silent_version_check()
 
         outer.addLayout(btn_col)
@@ -1905,7 +1875,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.29", self)
+        self._ver_lbl = QLabel("v3.30", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1938,48 +1908,81 @@ class LauncherPage(FrostBackground):
             pass
 
     def _start_silent_version_check(self):
-        """Check for updates silently in a background thread."""
-        import threading
-        def _check():
+        """Check for updates silently using subprocess with CREATE_NO_WINDOW."""
+        import subprocess, threading
+
+        VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
+        version_file = os.path.join(BASE_DIR, "_version_check_silent.txt")
+
+        # Clean up any previous file
+        if os.path.exists(version_file):
             try:
-                import requests
-                r = requests.get(
-                    "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json",
-                    timeout=15)
-                r.raise_for_status()
-                import json
-                data = json.loads(r.text)
-                server_ver = data.get("version", "0")
-                current_ver = "3.29"
-                sv = tuple(int(x) for x in server_ver.strip().split("."))
-                cv = tuple(int(x) for x in current_ver.strip().split("."))
-                if sv > cv:
-                    QTimer.singleShot(0, self._show_update_notif)
+                os.remove(version_file)
             except Exception:
-                pass  # silently fail
-        t = threading.Thread(target=_check, daemon=True)
+                pass
+
+        ps_cmd = (
+            "powershell.exe -NonInteractive -Command "
+            "\"try { $r = Invoke-WebRequest -Uri '" + VERSION_URL + "' "
+            "-UseBasicParsing -TimeoutSec 15; "
+            "$r.Content | Out-File -Encoding ascii '" + version_file.replace("'", "''") + "' } "
+            "catch { 'ERROR' | Out-File -Encoding ascii '" + version_file.replace("'", "''") + "' }\""
+        )
+
+        CREATE_NO_WINDOW = 0x08000000
+        try:
+            subprocess.Popen(ps_cmd, creationflags=CREATE_NO_WINDOW)
+        except Exception:
+            return
+
+        def _poll():
+            import time, json
+            for _ in range(60):  # up to 30 seconds
+                time.sleep(0.5)
+                if os.path.exists(version_file):
+                    time.sleep(0.3)
+                    try:
+                        with open(version_file, "r") as vf:
+                            content = vf.read().strip()
+                        os.remove(version_file)
+                        if "ERROR" in content:
+                            return
+                        data = json.loads(content)
+                        server_ver = data.get("version", "0")
+                        current_ver = "3.30"
+                        sv = tuple(int(x) for x in server_ver.strip().split("."))
+                        cv = tuple(int(x) for x in current_ver.strip().split("."))
+                        if sv > cv:
+                            QTimer.singleShot(0, self._show_update_notif)
+                    except Exception:
+                        pass
+                    return
+        t = threading.Thread(target=_poll, daemon=True)
         t.start()
 
     def _show_update_notif(self):
-        """Show the update notification dot and label."""
-        if hasattr(self, '_notif_dot') and not _qt_deleted(self._notif_dot):
-            self._notif_dot.show()
-            self._notif_lbl.show()
-            self._notif_pulse_timer.start()
+        """Dynamically add an 'Update Available' button using the theme's accent color."""
+        if hasattr(self, '_update_btn') and not _qt_deleted(self._update_btn):
+            return  # already added
 
-    def _pulse_notif_dot(self):
-        """Toggle dot opacity for a gentle pulse effect."""
-        if hasattr(self, '_notif_dot') and not _qt_deleted(self._notif_dot):
-            self._notif_pulse_on = not self._notif_pulse_on
-            alpha = "0.9" if self._notif_pulse_on else "0.3"
-            self._notif_dot.setStyleSheet(
-                f"color: rgba(255,100,60,{alpha}); background: transparent;")
+        accent = T.get('accent_bg', '#4A7090')
+        accent_text = T.get('accent_text', '#ffffff')
+
+        self._btn_col.addSpacing(90)
+        self._update_btn = MenuButton("Update Available")
+        self._update_btn.setMinimumWidth(480)
+        self._update_btn.setMaximumWidth(540)
+        self._update_btn.setStyleSheet(
+            f"background: {accent}; color: {accent_text}; "
+            "border-radius: 12px; padding: 12px 0; font-size: 17px;")
+        self._update_btn.clicked.connect(lambda checked: self._do_update_check())
+        self._btn_col.addWidget(self._update_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def _do_update_check(self):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.29"
+        CURRENT_VERSION = "3.30"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2053,13 +2056,14 @@ class LauncherPage(FrostBackground):
                 "Connection timed out.\nPlease try again later.")
 
     def _reset_update_btn(self):
-        self._update_btn.setText("Check for Updates")
-        self._update_btn.setEnabled(True)
+        if hasattr(self, '_update_btn') and not _qt_deleted(self._update_btn):
+            self._update_btn.setText("Update Available")
+            self._update_btn.setEnabled(True)
 
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.29"
+        CURRENT_VERSION = "3.30"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
         def parse_ver(v):
