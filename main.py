@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.46",
+    "version": "3.47",
 }
 
 def _load_config():
@@ -1875,7 +1875,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.46", self)
+        self._ver_lbl = QLabel("v3.47", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1950,7 +1950,7 @@ class LauncherPage(FrostBackground):
                             return
                         data = json.loads(content)
                         server_ver = data.get("version", "0")
-                        current_ver = "3.46"
+                        current_ver = "3.47"
                         sv = tuple(int(x) for x in server_ver.strip().split("."))
                         cv = tuple(int(x) for x in current_ver.strip().split("."))
                         if sv > cv:
@@ -1994,7 +1994,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.46"
+        CURRENT_VERSION = "3.47"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2081,7 +2081,7 @@ class LauncherPage(FrostBackground):
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.46"
+        CURRENT_VERSION = "3.47"
 
         def parse_ver(v):
             return tuple(int(x) for x in v.strip().split("."))
@@ -3980,7 +3980,7 @@ class WinPosSetupPage(FrostBackground):
         # Reference design size — scale relative to this
         ref = 800
         s = min(w, h) / ref
-        s = max(0.55, min(s, 1.0))
+        s = max(0.7, min(s, 1.0))
 
         # Avoid redundant updates when scale hasn't meaningfully changed
         if abs(s - self._last_scale) < 0.02:
@@ -4007,7 +4007,7 @@ class WinPosSetupPage(FrostBackground):
         if vertical:
             self._range_btn_row.setDirection(QBoxLayout.Direction.TopToBottom)
             range_fs = max(10, int(12 * s))
-            range_mh = max(38, int(48 * s))
+            range_mh = max(48, int(52 * s))
             range_pad_h = max(10, int(16 * s))
         else:
             self._range_btn_row.setDirection(QBoxLayout.Direction.LeftToRight)
