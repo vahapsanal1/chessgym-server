@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.44",
+    "version": "3.45",
 }
 
 def _load_config():
@@ -1875,7 +1875,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.44", self)
+        self._ver_lbl = QLabel("v3.45", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1950,7 +1950,7 @@ class LauncherPage(FrostBackground):
                             return
                         data = json.loads(content)
                         server_ver = data.get("version", "0")
-                        current_ver = "3.44"
+                        current_ver = "3.45"
                         sv = tuple(int(x) for x in server_ver.strip().split("."))
                         cv = tuple(int(x) for x in current_ver.strip().split("."))
                         if sv > cv:
@@ -1994,7 +1994,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.44"
+        CURRENT_VERSION = "3.45"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2081,7 +2081,7 @@ class LauncherPage(FrostBackground):
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.44"
+        CURRENT_VERSION = "3.45"
 
         def parse_ver(v):
             return tuple(int(x) for x in v.strip().split("."))
@@ -3991,7 +3991,7 @@ class WinPosSetupPage(FrostBackground):
         card_mw = max(360, int(520 * s))
         for card in [self._card1, self._card2, self._card3, self._card4]:
             card.setMinimumWidth(card_mw)
-            card.setMaximumWidth(card_mw)
+        self._pos_count_lbl.setMaximumWidth(card_mw - 36)
 
         # Title
         self._title_lbl.setFont(QFont(_UI_FONT, max(16, int(28 * s)), QFont.Weight.Light))
