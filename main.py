@@ -1023,7 +1023,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.8",
+    "version": "3.9",
 }
 
 def _load_config():
@@ -1878,7 +1878,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.8", self)
+        self._ver_lbl = QLabel("v3.9", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1914,7 +1914,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.8"
+        CURRENT_VERSION = "3.9"
         SERVER_URL = "https://chessgym-server.onrender.com"
 
         # Step 1: Check version via PowerShell (bat that writes result to temp file)
