@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.42",
+    "version": "3.43",
 }
 
 def _load_config():
@@ -1875,7 +1875,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.42", self)
+        self._ver_lbl = QLabel("v3.43", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1950,7 +1950,7 @@ class LauncherPage(FrostBackground):
                             return
                         data = json.loads(content)
                         server_ver = data.get("version", "0")
-                        current_ver = "3.42"
+                        current_ver = "3.43"
                         sv = tuple(int(x) for x in server_ver.strip().split("."))
                         cv = tuple(int(x) for x in current_ver.strip().split("."))
                         if sv > cv:
@@ -1983,7 +1983,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.42"
+        CURRENT_VERSION = "3.43"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2070,7 +2070,7 @@ class LauncherPage(FrostBackground):
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.42"
+        CURRENT_VERSION = "3.43"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
         def parse_ver(v):
@@ -3799,7 +3799,6 @@ class WinPosSetupPage(FrostBackground):
 
         inner = QVBoxLayout()
         inner.setSpacing(10)
-        inner.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._title_lbl = _make_label("ChessGym", 28, T['title'])
         self._title_lbl.setFont(QFont(_UI_FONT, 28, QFont.Weight.Light))
@@ -3968,6 +3967,12 @@ class WinPosSetupPage(FrostBackground):
         if abs(s - self._last_scale) < 0.02:
             return
         self._last_scale = s
+
+        # Card widths — uniform across all cards
+        card_mw = max(320, int(520 * s))
+        for card in [self._card1, self._card2, self._card3, self._card4]:
+            card.setMinimumWidth(card_mw)
+            card.setMaximumWidth(card_mw)
 
         # Title
         self._title_lbl.setFont(QFont(_UI_FONT, max(16, int(28 * s)), QFont.Weight.Light))
