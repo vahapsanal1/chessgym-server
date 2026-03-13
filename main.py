@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.47",
+    "version": "3.48",
 }
 
 def _load_config():
@@ -1875,7 +1875,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.47", self)
+        self._ver_lbl = QLabel("v3.48", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1950,7 +1950,7 @@ class LauncherPage(FrostBackground):
                             return
                         data = json.loads(content)
                         server_ver = data.get("version", "0")
-                        current_ver = "3.47"
+                        current_ver = "3.48"
                         sv = tuple(int(x) for x in server_ver.strip().split("."))
                         cv = tuple(int(x) for x in current_ver.strip().split("."))
                         if sv > cv:
@@ -1994,7 +1994,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.47"
+        CURRENT_VERSION = "3.48"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2081,7 +2081,7 @@ class LauncherPage(FrostBackground):
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.47"
+        CURRENT_VERSION = "3.48"
 
         def parse_ver(v):
             return tuple(int(x) for x in v.strip().split("."))
@@ -3800,15 +3800,14 @@ class WinPosSetupPage(FrostBackground):
         self._color = "white"
         self._build_ui()
 
+    _CARD_SS = (
+        f"QFrame {{ background-color: {T['section_bg']}; "
+        f"border: 1px solid {T['section_border']}; border-radius: 12px; }}"
+    )
+
     def _make_section_card(self):
         card = QFrame()
-        card.setStyleSheet(f"""
-            QFrame {{
-                background-color: {T['section_bg']};
-                border: 1px solid {T['section_border']};
-                border-radius: 13px;
-            }}
-        """)
+        card.setStyleSheet(self._CARD_SS)
         return card
 
     def _build_ui(self):
@@ -3817,62 +3816,59 @@ class WinPosSetupPage(FrostBackground):
         hc = QHBoxLayout(); hc.addStretch()
 
         inner = QVBoxLayout()
-        inner.setSpacing(10)
+        inner.setSpacing(12)
 
+        # Title
         self._title_lbl = _make_label("ChessGym", 28, T['title'])
         self._title_lbl.setFont(QFont(_UI_FONT, 28, QFont.Weight.Light))
         self._title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         inner.addWidget(self._title_lbl)
-        inner.addSpacing(8)
+        inner.addSpacing(6)
 
-        # 1. ADVANTAGE LEVEL — section card
+        # 1. ADVANTAGE LEVEL card
         card1 = self._make_section_card()
         cl1 = QVBoxLayout(card1)
-        cl1.setContentsMargins(18, 16, 18, 16)
-        cl1.setSpacing(12)
+        cl1.setContentsMargins(22, 20, 22, 20)
+        cl1.setSpacing(10)
         self._sec_lbl_adv = _section_label("ADVANTAGE LEVEL")
         cl1.addWidget(self._sec_lbl_adv)
-        self._range_btn_row = QHBoxLayout(); self._range_btn_row.setSpacing(8)
+        self._range_btn_row = QHBoxLayout(); self._range_btn_row.setSpacing(10)
         self._range_btns = []
         for i, r in enumerate(_WPOS_RANGES):
             btn = ToggleButton(r["label"], active=(i == 0))
-            btn.setFont(QFont(_UI_FONT, 12, QFont.Weight.Normal))
-            btn.setMinimumWidth(110)
+            btn.setFont(QFont(_UI_FONT, 17, QFont.Weight.Normal))
             btn.clicked.connect(lambda checked, idx=i: (play_menu_click(), self._pick_range(idx)))
             _add_press_anim(btn)
             self._range_btn_row.addWidget(btn)
             self._range_btns.append(btn)
         cl1.addLayout(self._range_btn_row)
 
-        # Position count indicator
         self._pos_count_lbl = QLabel("")
         self._pos_count_lbl.setFont(QFont(_UI_FONT, 11, QFont.Weight.Normal))
         self._pos_count_lbl.setStyleSheet(f"color: {T['text_muted']}; background: transparent;")
         self._pos_count_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._pos_count_lbl.setWordWrap(True)
-        self._pos_count_lbl.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         cl1.addWidget(self._pos_count_lbl)
         self._update_pos_count()
 
         self._card1 = card1; self._cl1 = cl1
         inner.addWidget(card1)
 
-        # 2. PLAY AS — section card
+        # 2. PLAY AS card
         card2 = self._make_section_card()
         cl2 = QVBoxLayout(card2)
-        cl2.setContentsMargins(18, 16, 18, 16)
-        cl2.setSpacing(12)
+        cl2.setContentsMargins(22, 20, 22, 20)
+        cl2.setSpacing(10)
         self._sec_lbl_play = _section_label("PLAY AS")
         cl2.addWidget(self._sec_lbl_play)
-        cr = QHBoxLayout(); cr.setSpacing(12)
+        cr = QHBoxLayout(); cr.setSpacing(10)
         self._btn_white = ToggleButton("WHITE", active=True)
-        self._btn_white.setMinimumWidth(180)
+        self._btn_white.setFont(QFont(_UI_FONT, 16, QFont.Weight.Normal))
         self._btn_white.clicked.connect(lambda: (play_menu_click(), self._pick_color("white")))
         _add_press_anim(self._btn_white)
         cr.addWidget(self._btn_white)
         self._btn_black = ToggleButton("BLACK", active=False)
-        self._btn_black.setMinimumWidth(180)
+        self._btn_black.setFont(QFont(_UI_FONT, 16, QFont.Weight.Normal))
         self._btn_black.clicked.connect(lambda: (play_menu_click(), self._pick_color("black")))
         _add_press_anim(self._btn_black)
         cr.addWidget(self._btn_black)
@@ -3880,27 +3876,25 @@ class WinPosSetupPage(FrostBackground):
         self._card2 = card2; self._cl2 = cl2
         inner.addWidget(card2)
 
-        # 3. YOUR TIME CONTROL — section card with pill spinners
+        # 3. YOUR TIME CONTROL card
         card3 = self._make_section_card()
         cl3 = QVBoxLayout(card3)
-        cl3.setContentsMargins(18, 16, 18, 16)
+        cl3.setContentsMargins(22, 20, 22, 20)
         cl3.setSpacing(6)
         self._sec_lbl_ytc = _section_label("YOUR TIME CONTROL")
         cl3.addWidget(self._sec_lbl_ytc)
         r_pm = QHBoxLayout(); r_pm.setSpacing(0)
         self._lbl_pm = QLabel("Minutes")
-        self._lbl_pm.setFont(QFont(_UI_FONT, 13, QFont.Weight.Light))
+        self._lbl_pm.setFont(QFont(_UI_FONT, 15, QFont.Weight.Light))
         self._lbl_pm.setStyleSheet(f"color: {T['pill_label']}; background: transparent;")
-        self._lbl_pm.setFixedWidth(80); self._lbl_pm.setFixedHeight(44)
         r_pm.addWidget(self._lbl_pm); r_pm.addStretch()
         self.p_min = PillSpinner(0, 60, 3)
         r_pm.addWidget(self.p_min)
         cl3.addLayout(r_pm)
         r_pi = QHBoxLayout(); r_pi.setSpacing(0)
         self._lbl_pi = QLabel("Increment")
-        self._lbl_pi.setFont(QFont(_UI_FONT, 13, QFont.Weight.Light))
+        self._lbl_pi.setFont(QFont(_UI_FONT, 15, QFont.Weight.Light))
         self._lbl_pi.setStyleSheet(f"color: {T['pill_label']}; background: transparent;")
-        self._lbl_pi.setFixedWidth(80); self._lbl_pi.setFixedHeight(44)
         r_pi.addWidget(self._lbl_pi); r_pi.addStretch()
         self.p_inc = PillSpinner(0, 60, 2)
         r_pi.addWidget(self.p_inc)
@@ -3908,27 +3902,25 @@ class WinPosSetupPage(FrostBackground):
         self._card3 = card3; self._cl3 = cl3
         inner.addWidget(card3)
 
-        # 4. ENGINE TIME CONTROL — section card with pill spinners
+        # 4. ENGINE TIME CONTROL card
         card4 = self._make_section_card()
         cl4 = QVBoxLayout(card4)
-        cl4.setContentsMargins(18, 16, 18, 16)
+        cl4.setContentsMargins(22, 20, 22, 20)
         cl4.setSpacing(6)
         self._sec_lbl_etc = _section_label("ENGINE TIME CONTROL")
         cl4.addWidget(self._sec_lbl_etc)
         r_em = QHBoxLayout(); r_em.setSpacing(0)
         self._lbl_em = QLabel("Minutes")
-        self._lbl_em.setFont(QFont(_UI_FONT, 13, QFont.Weight.Light))
+        self._lbl_em.setFont(QFont(_UI_FONT, 15, QFont.Weight.Light))
         self._lbl_em.setStyleSheet(f"color: {T['pill_label']}; background: transparent;")
-        self._lbl_em.setFixedWidth(80); self._lbl_em.setFixedHeight(44)
         r_em.addWidget(self._lbl_em); r_em.addStretch()
         self.e_min = PillSpinner(0, 60, 1)
         r_em.addWidget(self.e_min)
         cl4.addLayout(r_em)
         r_ei = QHBoxLayout(); r_ei.setSpacing(0)
         self._lbl_ei = QLabel("Increment")
-        self._lbl_ei.setFont(QFont(_UI_FONT, 13, QFont.Weight.Light))
+        self._lbl_ei.setFont(QFont(_UI_FONT, 15, QFont.Weight.Light))
         self._lbl_ei.setStyleSheet(f"color: {T['pill_label']}; background: transparent;")
-        self._lbl_ei.setFixedWidth(80); self._lbl_ei.setFixedHeight(44)
         r_ei.addWidget(self._lbl_ei); r_ei.addStretch()
         self.e_inc = PillSpinner(0, 60, 2)
         r_ei.addWidget(self.e_inc)
@@ -3936,35 +3928,61 @@ class WinPosSetupPage(FrostBackground):
         self._card4 = card4; self._cl4 = cl4
         inner.addWidget(card4)
 
-        inner.addSpacing(12)
-        self._btn_start = _make_button("Start Game  \u2192", 14, min_height=52, min_width=320, accent=True)
-        self._btn_start.setStyleSheet(self._btn_start.styleSheet().replace("border-radius: 12px", "border-radius: 13px"))
+        # Start Game button — full width
+        inner.addSpacing(10)
+        self._btn_start = QPushButton("Start Game  \u2192")
+        self._btn_start.setFont(QFont(_UI_FONT, 17, QFont.Weight.Normal))
+        self._btn_start.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._btn_start.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {T['accent_bg']}; color: {T['accent_text']};
+                border: 1px solid {T['accent_border']}; border-radius: 12px;
+                padding: 20px 0; font-size: 17px;
+            }}
+            QPushButton:hover {{ background-color: {T['accent_border']}; }}
+        """)
         self._btn_start.clicked.connect(lambda: (play_menu_click(), self._start()))
         _add_press_anim(self._btn_start)
-        inner.addWidget(self._btn_start, alignment=Qt.AlignmentFlag.AlignCenter)
+        inner.addWidget(self._btn_start)
+
+        # Back to Menu — centered muted text
         self._btn_back = QPushButton("Back to Menu")
         self._btn_back.setFont(QFont(_UI_FONT, 12, QFont.Weight.Light))
         self._btn_back.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._btn_back.setStyleSheet(f"""
             QPushButton {{
                 background: transparent; color: {T['section_label']};
-                border: none; padding: 8px 20px; min-height: 36px;
+                border: none; padding: 6px 20px;
             }}
             QPushButton:hover {{ color: {T['text_primary']}; }}
         """)
         self._btn_back.clicked.connect(lambda: (play_menu_click(), self.finished.emit("back")))
         _add_press_anim(self._btn_back)
         inner.addWidget(self._btn_back, alignment=Qt.AlignmentFlag.AlignCenter)
-        self._btn_scanner = _make_button("Add New Positions", 11, min_height=32)
+
+        # Add New Positions — full width, subtle style
+        self._btn_scanner = QPushButton("Add New Positions")
+        self._btn_scanner.setFont(QFont(_UI_FONT, 15, QFont.Weight.Normal))
+        self._btn_scanner.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._btn_scanner.setStyleSheet(f"""
+            QPushButton {{
+                background: transparent; color: {T['text_muted']};
+                border: 1px solid {T['section_border']}; border-radius: 12px;
+                padding: 18px 0; font-size: 15px;
+            }}
+            QPushButton:hover {{
+                color: {T['text_primary']};
+                border-color: {T['accent_border']};
+            }}
+        """)
         self._btn_scanner.clicked.connect(lambda: (play_menu_click(), self.finished.emit("scanner")))
         _add_press_anim(self._btn_scanner)
-        inner.addWidget(self._btn_scanner, alignment=Qt.AlignmentFlag.AlignCenter)
+        inner.addWidget(self._btn_scanner)
 
         self._inner = inner
         hc.addLayout(inner); hc.addStretch()
         outer.addLayout(hc); outer.addStretch(2)
 
-        # Store all time-control labels for rescaling
         self._time_labels = [self._lbl_pm, self._lbl_pi, self._lbl_em, self._lbl_ei]
         self._section_labels = [self._sec_lbl_adv, self._sec_lbl_play, self._sec_lbl_ytc, self._sec_lbl_etc]
         self._card_layouts = [self._cl1, self._cl2, self._cl3, self._cl4]
@@ -3977,108 +3995,79 @@ class WinPosSetupPage(FrostBackground):
     def _rescale(self):
         """Dynamically scale fonts and spacing based on window size."""
         w = self.width(); h = self.height()
-        # Reference design size — scale relative to this
         ref = 800
         s = min(w, h) / ref
         s = max(0.7, min(s, 1.0))
 
-        # Avoid redundant updates when scale hasn't meaningfully changed
         if abs(s - self._last_scale) < 0.02:
             return
         self._last_scale = s
 
-        # Card widths — uniform across all cards
-        card_mw = max(360, int(520 * s))
+        # Card minimum widths
+        card_mw = max(420, int(520 * s))
         for card in [self._card1, self._card2, self._card3, self._card4]:
             card.setMinimumWidth(card_mw)
-        self._pos_count_lbl.setMaximumWidth(card_mw - 36)
 
         # Title
-        self._title_lbl.setFont(QFont(_UI_FONT, max(16, int(28 * s)), QFont.Weight.Light))
+        self._title_lbl.setFont(QFont(_UI_FONT, max(20, int(28 * s)), QFont.Weight.Light))
 
         # Section labels
-        sec_fs = max(8, int(10 * s))
+        sec_fs = max(9, int(10 * s))
         for lbl in self._section_labels:
             lbl.setFont(QFont(_UI_FONT, sec_fs, QFont.Weight.Normal))
 
-        # Advantage-level range buttons — stack vertically on small screens
-        from PyQt6.QtWidgets import QBoxLayout
-        vertical = s < 0.7
-        if vertical:
-            self._range_btn_row.setDirection(QBoxLayout.Direction.TopToBottom)
-            range_fs = max(10, int(12 * s))
-            range_mh = max(48, int(52 * s))
-            range_pad_h = max(10, int(16 * s))
-        else:
-            self._range_btn_row.setDirection(QBoxLayout.Direction.LeftToRight)
-            range_fs = max(9, int(12 * s))
-            range_mh = max(34, int(52 * s))
-            range_pad_h = max(6, int(16 * s))
-        range_mw = 0 if vertical else max(80, int(110 * s))
+        # Advantage-level range buttons
+        range_fs = max(13, int(17 * s))
+        range_mh = max(48, int(62 * s))
+        import re as _re
         for btn in self._range_btns:
             btn.setFont(QFont(_UI_FONT, range_fs, QFont.Weight.Normal))
-            btn.setMinimumWidth(range_mw)
             btn.setMinimumHeight(range_mh)
-            # Update stylesheet min-height, font-size and padding to match
             cur = btn.styleSheet()
-            import re as _re
             cur = _re.sub(r'min-height:\s*\d+px', f'min-height: {range_mh}px', cur)
             cur = _re.sub(r'font-size:\s*\d+px', f'font-size: {range_fs}px', cur)
-            cur = _re.sub(r'padding:\s*\d+px\s+\d+px', f'padding: 8px {range_pad_h}px', cur)
+            cur = _re.sub(r'padding:\s*\d+px\s+\d+px', f'padding: 20px 16px', cur)
             btn.setStyleSheet(cur)
-        self._range_btn_row.setSpacing(max(6, int(8 * s)))
+        self._range_btn_row.setSpacing(max(8, int(10 * s)))
 
         # Position count label
-        self._pos_count_lbl.setFont(QFont(_UI_FONT, max(8, int(11 * s)), QFont.Weight.Normal))
+        self._pos_count_lbl.setFont(QFont(_UI_FONT, max(9, int(11 * s)), QFont.Weight.Normal))
 
         # Play-as buttons
-        color_mw = max(90, int(180 * s))
-        color_mh = max(34, int(52 * s))
-        color_fs = max(10, int(13 * s))
+        color_fs = max(12, int(16 * s))
+        color_mh = max(44, int(58 * s))
         for btn in [self._btn_white, self._btn_black]:
             btn.setFont(QFont(_UI_FONT, color_fs, QFont.Weight.Normal))
-            btn.setMinimumWidth(color_mw)
             btn.setMinimumHeight(color_mh)
             cur = btn.styleSheet()
-            import re as _re
             cur = _re.sub(r'min-height:\s*\d+px', f'min-height: {color_mh}px', cur)
             cur = _re.sub(r'font-size:\s*\d+px', f'font-size: {color_fs}px', cur)
+            cur = _re.sub(r'padding:\s*\d+px\s+\d+px', f'padding: 18px 16px', cur)
             btn.setStyleSheet(cur)
 
         # Time-control labels
-        tc_fs = max(9, int(13 * s))
-        tc_w = max(50, int(80 * s))
-        tc_h = max(28, int(44 * s))
+        tc_fs = max(12, int(15 * s))
         for lbl in self._time_labels:
             lbl.setFont(QFont(_UI_FONT, tc_fs, QFont.Weight.Light))
-            lbl.setFixedWidth(tc_w)
-            lbl.setFixedHeight(tc_h)
 
         # Card margins
-        cm_h = max(10, int(18 * s))
-        cm_v = max(8, int(16 * s))
-        cm_sp_top = max(6, int(12 * s))
-        cm_sp_tc = max(3, int(6 * s))
-        for i, cl in enumerate(self._card_layouts):
+        cm_h = max(16, int(22 * s))
+        cm_v = max(14, int(20 * s))
+        for cl in self._card_layouts:
             cl.setContentsMargins(cm_h, cm_v, cm_h, cm_v)
-            cl.setSpacing(cm_sp_top if i <= 1 else cm_sp_tc)
 
         # Inner layout spacing
-        self._inner.setSpacing(max(5, int(10 * s)))
+        self._inner.setSpacing(max(8, int(12 * s)))
 
         # Start button
-        start_fs = max(10, int(14 * s))
-        start_mh = max(34, int(52 * s))
-        start_mw = max(180, int(320 * s))
+        start_fs = max(13, int(17 * s))
         self._btn_start.setFont(QFont(_UI_FONT, start_fs, QFont.Weight.Normal))
-        self._btn_start.setMinimumHeight(start_mh)
-        self._btn_start.setMinimumWidth(start_mw)
 
         # Back button
-        self._btn_back.setFont(QFont(_UI_FONT, max(9, int(12 * s)), QFont.Weight.Light))
+        self._btn_back.setFont(QFont(_UI_FONT, max(10, int(12 * s)), QFont.Weight.Light))
 
         # Scanner button
-        self._btn_scanner.setFont(QFont(_UI_FONT, max(8, int(11 * s)), QFont.Weight.Normal))
+        self._btn_scanner.setFont(QFont(_UI_FONT, max(12, int(15 * s)), QFont.Weight.Normal))
 
     def _pick_range(self, idx):
         self._range_idx = idx
