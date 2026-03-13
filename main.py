@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.17",
+    "version": "3.18",
 }
 
 def _load_config():
@@ -1879,7 +1879,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.17", self)
+        self._ver_lbl = QLabel("v3.18", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1915,7 +1915,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.17"
+        CURRENT_VERSION = "3.18"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2021,9 +2021,9 @@ class LauncherPage(FrostBackground):
                 '    del "%~0"\r\n'
                 '    exit /b 1\r\n'
                 ')\r\n'
-                # Wait for ChessGym to fully close
-                'echo Waiting for ChessGym to close...\r\n'
-                'timeout /t 5 /nobreak\r\n'
+                # Wait for ChessGym to fully close (download takes time,
+                # so ChessGym is likely already closed by now, but just in case)
+                'timeout /t 3 /nobreak\r\n'
                 # Delete old main.py
                 'if exist "%~dp0main.py" del "%~dp0main.py"\r\n'
                 # Verify old file is gone before renaming
@@ -2036,7 +2036,6 @@ class LauncherPage(FrostBackground):
                 ')\r\n'
                 # Rename new file
                 'rename "%~dp0main_new.py" "main.py"\r\n'
-                'timeout /t 5 /nobreak\r\n'
                 # Verify rename succeeded before relaunching
                 'if not exist "%~dp0main.py" (\r\n'
                 '    echo Rename failed. Update incomplete.\r\n'
@@ -2045,7 +2044,6 @@ class LauncherPage(FrostBackground):
                 '    exit /b 1\r\n'
                 ')\r\n'
                 # Relaunch ChessGym
-                'timeout /t 5 /nobreak\r\n'
                 'start "" "%~dp0ChessGym.exe"\r\n'
                 'del "%~0"\r\n'
             )
