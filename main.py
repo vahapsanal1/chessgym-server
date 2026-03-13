@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.43",
+    "version": "3.44",
 }
 
 def _load_config():
@@ -1875,7 +1875,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.43", self)
+        self._ver_lbl = QLabel("v3.44", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1950,10 +1950,11 @@ class LauncherPage(FrostBackground):
                             return
                         data = json.loads(content)
                         server_ver = data.get("version", "0")
-                        current_ver = "3.43"
+                        current_ver = "3.44"
                         sv = tuple(int(x) for x in server_ver.strip().split("."))
                         cv = tuple(int(x) for x in current_ver.strip().split("."))
                         if sv > cv:
+                            self._detected_server_ver = server_ver
                             QTimer.singleShot(0, self._show_update_notif)
                     except Exception:
                         pass
@@ -1974,16 +1975,26 @@ class LauncherPage(FrostBackground):
             "border: none; border-radius: 14px; "
             "padding: 11px 31px; font-size: 19px; } "
             "QPushButton:hover { background: rgba(220,100,20,1.0); }")
-        self._update_btn.clicked.connect(lambda checked: self._do_update_check())
+        self._update_btn.clicked.connect(lambda checked: self._start_update_directly())
         self._update_btn.adjustSize()
         self._update_btn.show()
         self._position_update_btn()
+
+    def _start_update_directly(self):
+        """Skip version check — use the version already detected by background check."""
+        play_menu_click()
+        ver = getattr(self, '_detected_server_ver', None)
+        if not ver:
+            return
+        self._update_btn.setText("Updating...")
+        self._update_btn.setEnabled(False)
+        self._do_download_update(ver)
 
     def _do_update_check(self):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.43"
+        CURRENT_VERSION = "3.44"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2070,8 +2081,7 @@ class LauncherPage(FrostBackground):
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.43"
-        DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
+        CURRENT_VERSION = "3.44"
 
         def parse_ver(v):
             return tuple(int(x) for x in v.strip().split("."))
@@ -2086,13 +2096,20 @@ class LauncherPage(FrostBackground):
                 "Something went wrong.\nPlease try again later.")
             return
 
-        # Update available - download via bat
+        # Update available — hand off to download
+        self._do_download_update(server_version)
+
+    def _do_download_update(self, server_version):
+        from PyQt6.QtWidgets import QMessageBox
+
+        DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
+
         QMessageBox.information(
             self, "ChessGym",
             f"Version {server_version} is available!\n"
             "Click OK to update.")
 
-        # Step 4: Create download bat using hardcoded absolute paths
+        # Create download bat using hardcoded absolute paths
         bat_path = os.path.join(BASE_DIR, "do_update.bat")
         main_new = os.path.join(BASE_DIR, "main_new.py").replace("/", "\\")
         main_old = os.path.join(BASE_DIR, "main.py").replace("/", "\\")
@@ -2174,9 +2191,11 @@ class LauncherPage(FrostBackground):
             os.startfile(relaunch_bat)
             os._exit(0)
         elif result == "FAIL":
+            self._reset_update_btn()
             QMessageBox.warning(self, "ChessGym",
                 "Update failed. Please try again later.")
         else:
+            self._reset_update_btn()
             QMessageBox.warning(self, "ChessGym",
                 "Update timed out. Please try again later.")
 
@@ -3969,7 +3988,7 @@ class WinPosSetupPage(FrostBackground):
         self._last_scale = s
 
         # Card widths — uniform across all cards
-        card_mw = max(320, int(520 * s))
+        card_mw = max(360, int(520 * s))
         for card in [self._card1, self._card2, self._card3, self._card4]:
             card.setMinimumWidth(card_mw)
             card.setMaximumWidth(card_mw)
@@ -3984,19 +4003,21 @@ class WinPosSetupPage(FrostBackground):
 
         # Advantage-level range buttons
         range_fs = max(9, int(12 * s))
-        range_mw = max(60, int(110 * s))
+        range_mw = max(80, int(110 * s))
         range_mh = max(34, int(52 * s))
+        range_pad_h = max(6, int(16 * s))
         for btn in self._range_btns:
             btn.setFont(QFont(_UI_FONT, range_fs, QFont.Weight.Normal))
             btn.setMinimumWidth(range_mw)
             btn.setMinimumHeight(range_mh)
-            # Update stylesheet min-height to match
+            # Update stylesheet min-height, font-size and padding to match
             cur = btn.styleSheet()
             import re as _re
             cur = _re.sub(r'min-height:\s*\d+px', f'min-height: {range_mh}px', cur)
             cur = _re.sub(r'font-size:\s*\d+px', f'font-size: {range_fs}px', cur)
+            cur = _re.sub(r'padding:\s*\d+px\s+\d+px', f'padding: 8px {range_pad_h}px', cur)
             btn.setStyleSheet(cur)
-        self._range_btn_row.setSpacing(max(4, int(8 * s)))
+        self._range_btn_row.setSpacing(max(6, int(8 * s)))
 
         # Position count label
         self._pos_count_lbl.setFont(QFont(_UI_FONT, max(8, int(11 * s)), QFont.Weight.Normal))
