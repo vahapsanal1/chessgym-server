@@ -1024,7 +1024,7 @@ _DEFAULT_CONFIG = {
     "black_book": None,
     "theme": "soft_light",
     "games_panel_hidden": True,
-    "version": "3.27",
+    "version": "3.28",
 }
 
 def _load_config():
@@ -1905,7 +1905,7 @@ class LauncherPage(FrostBackground):
         self._mute_btn.show()
 
         # -- Version label (bottom-right, subtle) --
-        self._ver_lbl = QLabel("v3.27", self)
+        self._ver_lbl = QLabel("v3.28", self)
         self._ver_lbl.setFont(QFont(_UI_FONT, 11))
         self._ver_lbl.setStyleSheet("color: rgba(255,183,197,0.6); background: transparent;")
         self._ver_lbl.adjustSize()
@@ -1950,7 +1950,7 @@ class LauncherPage(FrostBackground):
                 import json
                 data = json.loads(r.text)
                 server_ver = data.get("version", "0")
-                current_ver = "3.27"
+                current_ver = "3.28"
                 sv = tuple(int(x) for x in server_ver.strip().split("."))
                 cv = tuple(int(x) for x in current_ver.strip().split("."))
                 if sv > cv:
@@ -1979,7 +1979,7 @@ class LauncherPage(FrostBackground):
         from PyQt6.QtWidgets import QMessageBox
         play_menu_click()
 
-        CURRENT_VERSION = "3.27"
+        CURRENT_VERSION = "3.28"
         VERSION_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/version.json"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
@@ -2001,13 +2001,8 @@ class LauncherPage(FrostBackground):
                 "catch { 'ERROR' | Out-File -Encoding ascii '%~dp0_version_check.txt' }\"\r\n"
                 'del "%~0"\r\n'
             )
-        # Run bat hidden via VBScript wrapper (no black window)
-        vbs_path = os.path.join(BASE_DIR, "_run_hidden.vbs")
-        with open(vbs_path, "w", encoding="ascii") as f:
-            f.write('CreateObject("Wscript.Shell").Run "' +
-                    check_bat.replace("/", "\\") + '", 0, False\r\n'
-                    'CreateObject("Scripting.FileSystemObject").DeleteFile WScript.ScriptFullName\r\n')
-        os.startfile(vbs_path)
+        import subprocess
+        subprocess.Popen(check_bat, creationflags=0x08000000)
 
         # Show "Checking..." on button, disable it
         self._update_btn.setText("Checking...")
@@ -2064,7 +2059,7 @@ class LauncherPage(FrostBackground):
     def _handle_version_result(self, server_version):
         from PyQt6.QtWidgets import QMessageBox
 
-        CURRENT_VERSION = "3.27"
+        CURRENT_VERSION = "3.28"
         DOWNLOAD_URL = "https://raw.githubusercontent.com/vahapsanal1/chessgym-server/main/main.py"
 
         def parse_ver(v):
@@ -2132,13 +2127,7 @@ class LauncherPage(FrostBackground):
                 'echo OK > "' + status_file + '"\r\n'
                 'del "' + bat_abs + '"\r\n'
             )
-        # Run bat hidden via VBScript wrapper (no black window)
-        vbs_path2 = os.path.join(BASE_DIR, "_run_hidden2.vbs")
-        with open(vbs_path2, "w", encoding="ascii") as f:
-            f.write('CreateObject("Wscript.Shell").Run "' +
-                    bat_abs + '", 0, False\r\n'
-                    'CreateObject("Scripting.FileSystemObject").DeleteFile WScript.ScriptFullName\r\n')
-        os.startfile(vbs_path2)
+        os.startfile(bat_path)
 
         # Poll for status file
         import time
@@ -2170,13 +2159,7 @@ class LauncherPage(FrostBackground):
                     'start "" "' + exe_path + '"\r\n'
                     'del "' + relaunch_abs + '"\r\n'
                 )
-            # Run bat hidden via VBScript wrapper (no black window)
-            vbs_path3 = os.path.join(BASE_DIR, "_run_hidden3.vbs")
-            with open(vbs_path3, "w", encoding="ascii") as f:
-                f.write('CreateObject("Wscript.Shell").Run "' +
-                        relaunch_abs + '", 0, False\r\n'
-                        'CreateObject("Scripting.FileSystemObject").DeleteFile WScript.ScriptFullName\r\n')
-            os.startfile(vbs_path3)
+            os.startfile(relaunch_bat)
             os._exit(0)
         elif result == "FAIL":
             QMessageBox.warning(self, "ChessGym",
